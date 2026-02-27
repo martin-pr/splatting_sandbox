@@ -2,6 +2,8 @@
 
 #include <SDL3/SDL.h>
 
+#include <functional>
+
 class App {
  public:
   App();
@@ -10,11 +12,9 @@ class App {
   App(const App&) = delete;
   App& operator=(const App&) = delete;
 
-  bool PollEvents();
+  bool PollEvents(const std::function<void(const SDL_Event&)>& handler = {});
   SDL_Window* GetWindow() const;
 
  private:
-  void Destroy();
-
-  SDL_Window* window_ = nullptr;
+  SDL_Window* window_;
 };

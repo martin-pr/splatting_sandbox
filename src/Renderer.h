@@ -26,8 +26,6 @@ class Renderer {
   Renderer& operator=(const Renderer&) = delete;
 
   void RenderFrame(const std::function<void(VkCommandBuffer)>& drawFn = {});
-  void RecreateSwapchain();
-
   Context GetContext() const;
 
  private:
@@ -58,6 +56,8 @@ class Renderer {
   void CreateSwapchain(VkSwapchainKHR oldSwapchain);
   void AllocateFrameCommandsAndSync();
   void DestroySwapchainResources();
+
+  void RecreateSwapchain();
 
   void Destroy();
 
