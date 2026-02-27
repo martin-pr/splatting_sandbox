@@ -5,10 +5,12 @@
 #include "App.h"
 #include "ImGuiLayer.h"
 #include "Renderer.h"
+#include "TriangleLayer.h"
 
 int main() {
   App app;
   Renderer renderer(app.GetWindow());
+  TriangleLayer triangleLayer(renderer.GetContext());
   ImGuiLayer imguiLayer(app.GetWindow(), renderer.GetContext());
 
   bool running = true;
@@ -30,9 +32,12 @@ int main() {
     });
 
     renderer.RenderFrame([&](VkCommandBuffer cmd) {
+      triangleLayer.Render(cmd, renderer.GetSwapchainExtent());
+
       imguiLayer.Render(cmd, []() {
         ImGui::Begin("Hello");
         ImGui::Text("SDL3 + Vulkan + ImGui");
+        ImGui::Text("Triangle is rendered with Vulkan pipeline.");
         ImGui::End();
       });
     });

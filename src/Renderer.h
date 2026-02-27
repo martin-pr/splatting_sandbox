@@ -29,6 +29,7 @@ class Renderer {
 
   void RecreateSwapchain();
   Context GetContext() const;
+  VkExtent2D GetSwapchainExtent() const;
 
  private:
   struct FrameSync {

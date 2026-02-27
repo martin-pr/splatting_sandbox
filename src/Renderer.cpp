@@ -101,6 +101,10 @@ Renderer::Context Renderer::GetContext() const {
   };
 }
 
+VkExtent2D Renderer::GetSwapchainExtent() const {
+  return swapchainExtent_;
+}
+
 bool Renderer::HasInstanceLayer(const char* layerName) {
   uint32_t layerCount = 0;
   if (vkEnumerateInstanceLayerProperties(&layerCount, nullptr) != VK_SUCCESS ||
