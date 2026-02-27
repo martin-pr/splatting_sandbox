@@ -13,8 +13,21 @@ int main() {
 
   bool running = true;
   while (running) {
-    running =
-        app.PollEvents([&](const SDL_Event& e) { imguiLayer.ProcessEvent(e); });
+    running = app.PollEvents([&](const SDL_Event& e) {
+      imguiLayer.ProcessEvent(e);
+
+      if (e.type == SDL_EVENT_WINDOW_RESIZED ||
+          e.type == SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED) {
+        // Resizing requires new swapchain
+        renderer.RecreateSwapchain();
+
+        // Keep ImGui coordinates in sync with the actual swapchain pixel size.
+        int width = e.window.data1;
+        int height = e.window.data2;
+
+        ImGui::GetIO().DisplaySize = ImVec2(width, height);
+      }
+    });
 
     renderer.RenderFrame([&](VkCommandBuffer cmd) {
       imguiLayer.Render(cmd, []() {
