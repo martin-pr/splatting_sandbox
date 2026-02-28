@@ -21,8 +21,9 @@ set(APP_SOURCES
   src/ImGuiLayer.cpp
   src/Renderer.cpp
   src/TriangleLayer.cpp
-  src/main.cpp
   src/VulkanErrors.cpp
+  src/VulkanShaders.cpp
+  src/main.cpp
   ${IMGUI_SDL3_BACKEND_SRC}
 )
 

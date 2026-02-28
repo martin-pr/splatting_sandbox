@@ -17,8 +17,6 @@ class TriangleLayer {
   void Render(VkCommandBuffer cmd, VkExtent2D extent) const;
 
  private:
-  static std::vector<uint32_t> LoadSpirvWords(const char* path);
-
   void Destroy();
 
   VkDevice device_ = VK_NULL_HANDLE;

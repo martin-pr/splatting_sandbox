@@ -5,18 +5,18 @@
 #include <fmt/core.h>
 
 #include <cstring>
-#include <fstream>
+#include <filesystem>
 #include <stdexcept>
-#include <string>
 
 #include "VulkanErrors.h"
+#include "VulkanShaders.h"
 
 #ifndef SHADER_DIR
 #define SHADER_DIR "shaders"
 #endif
 
 ImageLayer::ImageLayer(const Renderer::Context& ctx,
-                       const std::string& imagePath)
+                       const std::filesystem::path& imagePath)
     : device_(ctx.device) {
   try {
     const auto pixels = LoadImagePixels(imagePath);
@@ -64,10 +64,10 @@ void ImageLayer::Render(VkCommandBuffer cmd, VkExtent2D extent) const {
   vkCmdDraw(cmd, 6, 1, 0, 0);
 }
 
-std::vector<uint8_t> ImageLayer::LoadImagePixels(const std::string& path) {
-  auto inp = OIIO::ImageInput::open(path);
+std::vector<uint8_t> ImageLayer::LoadImagePixels(const std::filesystem::path& path) {
+  auto inp = OIIO::ImageInput::open(path.string());
   if (!inp)
-    throw std::runtime_error(fmt::format("Failed to open image: {} ({})", path, OIIO::geterror()));
+    throw std::runtime_error(fmt::format("Failed to open image: {} ({})", path.string(), OIIO::geterror()));
 
   const OIIO::ImageSpec& spec = inp->spec();
   imageWidth_ = spec.width;
@@ -78,7 +78,7 @@ std::vector<uint8_t> ImageLayer::LoadImagePixels(const std::string& path) {
 
   std::vector<uint8_t> raw(npixels * nchans);
   if (!inp->read_image(0, 0, 0, nchans, OIIO::TypeDesc::UINT8, raw.data()))
-    throw std::runtime_error(fmt::format("Failed to read image pixels: {} ({})", path, inp->geterror()));
+    throw std::runtime_error(fmt::format("Failed to read image pixels: {} ({})", path.string(), inp->geterror()));
   inp->close();
 
   std::vector<uint8_t> pixels(npixels * 4);
@@ -471,23 +471,6 @@ void ImageLayer::Destroy() {
   textureMemory_ = VK_NULL_HANDLE;
 
   device_ = VK_NULL_HANDLE;
-}
-
-std::vector<uint32_t> ImageLayer::LoadSpirvWords(const char* path) {
-  std::ifstream file(path, std::ios::binary | std::ios::ate);
-  if (!file)
-    throw std::runtime_error(fmt::format("Failed to open SPIR-V file: {}", path));
-
-  const std::streamsize size = file.tellg();
-  if (size <= 0 || (size % 4) != 0)
-    throw std::runtime_error(fmt::format("Invalid SPIR-V file size: {}", path));
-  file.seekg(0, std::ios::beg);
-
-  std::vector<uint32_t> words(static_cast<size_t>(size) / sizeof(uint32_t));
-  if (!file.read(reinterpret_cast<char*>(words.data()), size))
-    throw std::runtime_error(fmt::format("Failed to read SPIR-V file: {}", path));
-
-  return words;
 }
 
 uint32_t ImageLayer::FindMemoryType(VkPhysicalDeviceMemoryProperties memProps,

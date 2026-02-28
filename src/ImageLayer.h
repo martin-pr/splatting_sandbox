@@ -2,14 +2,14 @@
 
 #include <vulkan/vulkan.h>
 
-#include <string>
+#include <filesystem>
 #include <vector>
 
 #include "Renderer.h"
 
 class ImageLayer {
  public:
-  ImageLayer(const Renderer::Context& ctx, const std::string& imagePath);
+  ImageLayer(const Renderer::Context& ctx, const std::filesystem::path& imagePath);
   ~ImageLayer();
 
   ImageLayer(const ImageLayer&) = delete;
@@ -18,7 +18,7 @@ class ImageLayer {
   void Render(VkCommandBuffer cmd, VkExtent2D extent) const;
 
  private:
-  std::vector<uint8_t> LoadImagePixels(const std::string& path);
+  std::vector<uint8_t> LoadImagePixels(const std::filesystem::path& path);
   void UploadTexture(const std::vector<uint8_t>& pixels,
                      VkPhysicalDevice physicalDevice,
                      VkQueue queue,
@@ -27,7 +27,6 @@ class ImageLayer {
   void CreatePipeline(VkFormat swapchainFormat);
   void Destroy();
 
-  static std::vector<uint32_t> LoadSpirvWords(const char* path);
   static uint32_t FindMemoryType(VkPhysicalDeviceMemoryProperties memProps,
                                  uint32_t typeBits,
                                  VkMemoryPropertyFlags required);
