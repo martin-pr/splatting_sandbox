@@ -5,67 +5,28 @@
 #include <stdexcept>
 #include <string>
 
+#include "VulkanErrors.h"
+
 #ifndef SHADER_DIR
 #define SHADER_DIR "shaders"
 #endif
-
-namespace {
-#define STRING_CASE(x) \
-  case x:              \
-    return #x
-
-const char* VkResultToString(VkResult r) {
-  switch (r) {
-    STRING_CASE(VK_SUCCESS);
-    STRING_CASE(VK_ERROR_OUT_OF_HOST_MEMORY);
-    STRING_CASE(VK_ERROR_OUT_OF_DEVICE_MEMORY);
-    STRING_CASE(VK_ERROR_INITIALIZATION_FAILED);
-    STRING_CASE(VK_ERROR_DEVICE_LOST);
-    STRING_CASE(VK_ERROR_EXTENSION_NOT_PRESENT);
-    STRING_CASE(VK_ERROR_FEATURE_NOT_PRESENT);
-    STRING_CASE(VK_ERROR_LAYER_NOT_PRESENT);
-    STRING_CASE(VK_ERROR_INCOMPATIBLE_DRIVER);
-    STRING_CASE(VK_ERROR_TOO_MANY_OBJECTS);
-    STRING_CASE(VK_ERROR_SURFACE_LOST_KHR);
-    STRING_CASE(VK_ERROR_NATIVE_WINDOW_IN_USE_KHR);
-    STRING_CASE(VK_ERROR_OUT_OF_DATE_KHR);
-    STRING_CASE(VK_SUBOPTIMAL_KHR);
-    default:
-      return "VK_UNKNOWN_ERROR";
-  }
-}
-#undef STRING_CASE
-
-void VkCheck(VkResult result, const char* file, int line) {
-  if (result != VK_SUCCESS) {
-    throw std::runtime_error(std::string("Vulkan error at ") + file + ":" +
-                             std::to_string(line) + " => " +
-                             VkResultToString(result) + " (" +
-                             std::to_string(static_cast<int>(result)) + ")");
-  }
-}
-
-#define VK_CHECK(x) VkCheck((x), __FILE__, __LINE__)
-}  // namespace
 
 TriangleLayer::TriangleLayer(const Renderer::Context& ctx)
     : device_(ctx.device), swapchainFormat_(ctx.swapchainFormat) {
   VkShaderModule vertModule = VK_NULL_HANDLE;
   VkShaderModule fragModule = VK_NULL_HANDLE;
   try {
-    std::vector<uint32_t> vertWords;
-    std::vector<uint32_t> fragWords;
-    if (!LoadSpirvWords(SHADER_DIR "/triangle.vert.spv", vertWords) ||
-        !LoadSpirvWords(SHADER_DIR "/triangle.frag.spv", fragWords)) {
-      throw std::runtime_error("Failed to load triangle shader binaries");
-    }
+    const auto vertWords = LoadSpirvWords(SHADER_DIR "/triangle.vert.spv");
+    const auto fragWords = LoadSpirvWords(SHADER_DIR "/triangle.frag.spv");
 
-    VkShaderModuleCreateInfo vertCI{VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO};
+    VkShaderModuleCreateInfo vertCI{
+        VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO};
     vertCI.codeSize = vertWords.size() * sizeof(uint32_t);
     vertCI.pCode = vertWords.data();
     VK_CHECK(vkCreateShaderModule(device_, &vertCI, nullptr, &vertModule));
 
-    VkShaderModuleCreateInfo fragCI{VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO};
+    VkShaderModuleCreateInfo fragCI{
+        VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO};
     fragCI.codeSize = fragWords.size() * sizeof(uint32_t);
     fragCI.pCode = fragWords.data();
     VK_CHECK(vkCreateShaderModule(device_, &fragCI, nullptr, &fragModule));
@@ -104,10 +65,9 @@ TriangleLayer::TriangleLayer(const Renderer::Context& ctx)
     multisample.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 
     VkPipelineColorBlendAttachmentState colorBlendAttachment{};
-    colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT |
-                                          VK_COLOR_COMPONENT_G_BIT |
-                                          VK_COLOR_COMPONENT_B_BIT |
-                                          VK_COLOR_COMPONENT_A_BIT;
+    colorBlendAttachment.colorWriteMask =
+        VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
+        VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
 
     VkPipelineColorBlendStateCreateInfo colorBlend{
         VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO};
@@ -123,8 +83,8 @@ TriangleLayer::TriangleLayer(const Renderer::Context& ctx)
 
     VkPipelineLayoutCreateInfo layoutCI{
         VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
-    VK_CHECK(vkCreatePipelineLayout(device_, &layoutCI, nullptr,
-                                    &pipelineLayout_));
+    VK_CHECK(
+        vkCreatePipelineLayout(device_, &layoutCI, nullptr, &pipelineLayout_));
 
     VkPipelineRenderingCreateInfo renderingCI{
         VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO};
@@ -180,21 +140,24 @@ void TriangleLayer::Render(VkCommandBuffer cmd, VkExtent2D extent) const {
   vkCmdDraw(cmd, 3, 1, 0, 0);
 }
 
-bool TriangleLayer::LoadSpirvWords(const char* path,
-                                   std::vector<uint32_t>& outWords) {
+std::vector<uint32_t> TriangleLayer::LoadSpirvWords(const char* path) {
   std::ifstream file(path, std::ios::binary | std::ios::ate);
-  if (!file) return false;
+  if (!file)
+    throw std::runtime_error(std::string("Failed to open SPIR-V file: ") +
+                             path);
 
   const std::streamsize size = file.tellg();
-  if (size <= 0 || (size % 4) != 0) return false;
-
+  if (size <= 0 || (size % 4) != 0)
+    throw std::runtime_error(std::string("Invalid SPIR-V file size: ") + path);
   file.seekg(0, std::ios::beg);
-  std::vector<char> bytes(static_cast<size_t>(size));
-  if (!file.read(bytes.data(), size)) return false;
 
-  outWords.resize(bytes.size() / sizeof(uint32_t));
-  std::memcpy(outWords.data(), bytes.data(), bytes.size());
-  return true;
+  std::vector<uint32_t> outWords;
+  outWords.resize(size / sizeof(uint32_t));
+  if (!file.read(reinterpret_cast<char*>(outWords.data()), size))
+    throw std::runtime_error(std::string("Failed to read SPIR-V file: ") +
+                             path);
+
+  return outWords;
 }
 
 void TriangleLayer::Destroy() {

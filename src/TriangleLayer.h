@@ -17,7 +17,7 @@ class TriangleLayer {
   void Render(VkCommandBuffer cmd, VkExtent2D extent) const;
 
  private:
-  static bool LoadSpirvWords(const char* path, std::vector<uint32_t>& outWords);
+  static std::vector<uint32_t> LoadSpirvWords(const char* path);
 
   void Destroy();
 

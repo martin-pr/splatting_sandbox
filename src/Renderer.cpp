@@ -7,45 +7,7 @@
 #include <stdexcept>
 #include <string>
 
-namespace {
-#define STRING_CASE(x) \
-  case x:              \
-    return #x
-
-const char* VkResultToString(VkResult r) {
-  switch (r) {
-    STRING_CASE(VK_SUCCESS);
-    STRING_CASE(VK_ERROR_OUT_OF_HOST_MEMORY);
-    STRING_CASE(VK_ERROR_OUT_OF_DEVICE_MEMORY);
-    STRING_CASE(VK_ERROR_INITIALIZATION_FAILED);
-    STRING_CASE(VK_ERROR_DEVICE_LOST);
-    STRING_CASE(VK_ERROR_EXTENSION_NOT_PRESENT);
-    STRING_CASE(VK_ERROR_FEATURE_NOT_PRESENT);
-    STRING_CASE(VK_ERROR_LAYER_NOT_PRESENT);
-    STRING_CASE(VK_ERROR_INCOMPATIBLE_DRIVER);
-    STRING_CASE(VK_ERROR_TOO_MANY_OBJECTS);
-    STRING_CASE(VK_ERROR_SURFACE_LOST_KHR);
-    STRING_CASE(VK_ERROR_NATIVE_WINDOW_IN_USE_KHR);
-    STRING_CASE(VK_ERROR_OUT_OF_DATE_KHR);
-    STRING_CASE(VK_SUBOPTIMAL_KHR);
-    default:
-      return "VK_UNKNOWN_ERROR";
-  }
-}
-#undef STRING_CASE
-
-void VkCheck(VkResult result, const char* file, int line) {
-  if (result != VK_SUCCESS) {
-    throw std::runtime_error(std::string("Vulkan error at ") + file + ":" +
-                             std::to_string(line) + " => " +
-                             VkResultToString(result) + " (" +
-                             std::to_string(static_cast<int>(result)) + ")");
-  }
-}
-
-#define VK_CHECK(x) VkCheck((x), __FILE__, __LINE__)
-
-}  // namespace
+#include "VulkanErrors.h"
 
 Renderer::Renderer(SDL_Window* window) : window_(window) {
   try {
