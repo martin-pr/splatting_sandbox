@@ -1,15 +1,23 @@
 #include <imgui.h>
 
 #include <iostream>
+#include <optional>
 
 #include "App.h"
+#include "ImageLayer.h"
 #include "ImGuiLayer.h"
 #include "Renderer.h"
 #include "TriangleLayer.h"
 
-int main() {
+int main(int argc, char* argv[]) {
   App app;
   Renderer renderer(app.GetWindow());
+
+  std::optional<ImageLayer> imageLayer;
+  if (argc > 1) {
+    imageLayer.emplace(renderer.GetContext(), argv[1]);
+  }
+
   TriangleLayer triangleLayer(renderer.GetContext());
   ImGuiLayer imguiLayer(app.GetWindow(), renderer.GetContext());
 
@@ -32,7 +40,11 @@ int main() {
     });
 
     renderer.RenderFrame([&](VkCommandBuffer cmd) {
-      triangleLayer.Render(cmd, renderer.GetSwapchainExtent());
+      if (imageLayer.has_value()) {
+        imageLayer->Render(cmd, renderer.GetSwapchainExtent());
+      } else {
+        triangleLayer.Render(cmd, renderer.GetSwapchainExtent());
+      }
 
       imguiLayer.Render(cmd, []() {
         ImGui::Begin("Hello");

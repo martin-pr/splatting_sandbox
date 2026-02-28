@@ -11,10 +11,12 @@ find_program(GLSLC_EXECUTABLE glslc REQUIRED)
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(IMGUI REQUIRED IMPORTED_TARGET imgui)
+pkg_check_modules(OIIO REQUIRED IMPORTED_TARGET OpenImageIO)
 set(IMGUI_SDL3_BACKEND_SRC third-party/imgui_impl_sdl3.cpp)
 
 set(APP_SOURCES
   src/App.cpp
+  src/ImageLayer.cpp
   src/ImGuiLayer.cpp
   src/Renderer.cpp
   src/TriangleLayer.cpp
@@ -26,6 +28,8 @@ set(APP_SOURCES
 set(SHADER_OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/shaders")
 set(TRIANGLE_VERT_SPV "${SHADER_OUTPUT_DIR}/triangle.vert.spv")
 set(TRIANGLE_FRAG_SPV "${SHADER_OUTPUT_DIR}/triangle.frag.spv")
+set(IMAGE_VERT_SPV "${SHADER_OUTPUT_DIR}/image.vert.spv")
+set(IMAGE_FRAG_SPV "${SHADER_OUTPUT_DIR}/image.frag.spv")
 
 function(compile_shader source output)
   add_custom_command(
@@ -39,13 +43,18 @@ endfunction()
 
 compile_shader(${CMAKE_CURRENT_SOURCE_DIR}/src/shaders/triangle.vert ${TRIANGLE_VERT_SPV})
 compile_shader(${CMAKE_CURRENT_SOURCE_DIR}/src/shaders/triangle.frag ${TRIANGLE_FRAG_SPV})
+compile_shader(${CMAKE_CURRENT_SOURCE_DIR}/src/shaders/image.vert ${IMAGE_VERT_SPV})
+compile_shader(${CMAKE_CURRENT_SOURCE_DIR}/src/shaders/image.frag ${IMAGE_FRAG_SPV})
 
 add_custom_target(triangle_shaders ALL
   DEPENDS ${TRIANGLE_VERT_SPV} ${TRIANGLE_FRAG_SPV}
 )
+add_custom_target(image_shaders ALL
+  DEPENDS ${IMAGE_VERT_SPV} ${IMAGE_FRAG_SPV}
+)
 
 add_executable(splatting_sandbox ${APP_SOURCES})
-add_dependencies(splatting_sandbox triangle_shaders)
-target_link_libraries(splatting_sandbox PRIVATE SDL3::SDL3 Vulkan::Vulkan PkgConfig::IMGUI)
+add_dependencies(splatting_sandbox triangle_shaders image_shaders)
+target_link_libraries(splatting_sandbox PRIVATE SDL3::SDL3 Vulkan::Vulkan PkgConfig::IMGUI PkgConfig::OIIO)
 target_include_directories(splatting_sandbox PRIVATE /usr/include/imgui/backends)
 target_compile_definitions(splatting_sandbox PRIVATE SHADER_DIR="${SHADER_OUTPUT_DIR}")
