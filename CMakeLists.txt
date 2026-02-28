@@ -12,6 +12,7 @@ find_program(GLSLC_EXECUTABLE glslc REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(IMGUI REQUIRED IMPORTED_TARGET imgui)
 pkg_check_modules(OIIO REQUIRED IMPORTED_TARGET OpenImageIO)
+pkg_check_modules(FMT REQUIRED IMPORTED_TARGET fmt)
 set(IMGUI_SDL3_BACKEND_SRC third-party/imgui_impl_sdl3.cpp)
 
 set(APP_SOURCES
@@ -55,6 +56,6 @@ add_custom_target(image_shaders ALL
 
 add_executable(splatting_sandbox ${APP_SOURCES})
 add_dependencies(splatting_sandbox triangle_shaders image_shaders)
-target_link_libraries(splatting_sandbox PRIVATE SDL3::SDL3 Vulkan::Vulkan PkgConfig::IMGUI PkgConfig::OIIO)
+target_link_libraries(splatting_sandbox PRIVATE SDL3::SDL3 Vulkan::Vulkan PkgConfig::IMGUI PkgConfig::OIIO PkgConfig::FMT)
 target_include_directories(splatting_sandbox PRIVATE /usr/include/imgui/backends)
 target_compile_definitions(splatting_sandbox PRIVATE SHADER_DIR="${SHADER_OUTPUT_DIR}")

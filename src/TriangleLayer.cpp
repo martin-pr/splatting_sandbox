@@ -1,9 +1,9 @@
 #include "TriangleLayer.h"
 
-#include <cstring>
+#include <fmt/core.h>
+
 #include <fstream>
 #include <stdexcept>
-#include <string>
 
 #include "VulkanErrors.h"
 
@@ -143,19 +143,17 @@ void TriangleLayer::Render(VkCommandBuffer cmd, VkExtent2D extent) const {
 std::vector<uint32_t> TriangleLayer::LoadSpirvWords(const char* path) {
   std::ifstream file(path, std::ios::binary | std::ios::ate);
   if (!file)
-    throw std::runtime_error(std::string("Failed to open SPIR-V file: ") +
-                             path);
+    throw std::runtime_error(fmt::format("Failed to open SPIR-V file: {}", path));
 
   const std::streamsize size = file.tellg();
   if (size <= 0 || (size % 4) != 0)
-    throw std::runtime_error(std::string("Invalid SPIR-V file size: ") + path);
+    throw std::runtime_error(fmt::format("Invalid SPIR-V file size: {}", path));
   file.seekg(0, std::ios::beg);
 
   std::vector<uint32_t> outWords;
   outWords.resize(size / sizeof(uint32_t));
   if (!file.read(reinterpret_cast<char*>(outWords.data()), size))
-    throw std::runtime_error(std::string("Failed to read SPIR-V file: ") +
-                             path);
+    throw std::runtime_error(fmt::format("Failed to read SPIR-V file: {}", path));
 
   return outWords;
 }

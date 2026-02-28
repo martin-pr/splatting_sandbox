@@ -2,6 +2,8 @@
 
 #include <OpenImageIO/imageio.h>
 
+#include <fmt/core.h>
+
 #include <cstring>
 #include <fstream>
 #include <stdexcept>
@@ -65,8 +67,7 @@ void ImageLayer::Render(VkCommandBuffer cmd, VkExtent2D extent) const {
 std::vector<uint8_t> ImageLayer::LoadImagePixels(const std::string& path) {
   auto inp = OIIO::ImageInput::open(path);
   if (!inp)
-    throw std::runtime_error("Failed to open image: " + path + " (" +
-                             OIIO::geterror() + ")");
+    throw std::runtime_error(fmt::format("Failed to open image: {} ({})", path, OIIO::geterror()));
 
   const OIIO::ImageSpec& spec = inp->spec();
   imageWidth_ = spec.width;
@@ -77,8 +78,7 @@ std::vector<uint8_t> ImageLayer::LoadImagePixels(const std::string& path) {
 
   std::vector<uint8_t> raw(npixels * nchans);
   if (!inp->read_image(0, 0, 0, nchans, OIIO::TypeDesc::UINT8, raw.data()))
-    throw std::runtime_error("Failed to read image pixels: " + path + " (" +
-                             inp->geterror() + ")");
+    throw std::runtime_error(fmt::format("Failed to read image pixels: {} ({})", path, inp->geterror()));
   inp->close();
 
   std::vector<uint8_t> pixels(npixels * 4);
@@ -476,18 +476,16 @@ void ImageLayer::Destroy() {
 std::vector<uint32_t> ImageLayer::LoadSpirvWords(const char* path) {
   std::ifstream file(path, std::ios::binary | std::ios::ate);
   if (!file)
-    throw std::runtime_error(std::string("Failed to open SPIR-V file: ") +
-                             path);
+    throw std::runtime_error(fmt::format("Failed to open SPIR-V file: {}", path));
 
   const std::streamsize size = file.tellg();
   if (size <= 0 || (size % 4) != 0)
-    throw std::runtime_error(std::string("Invalid SPIR-V file size: ") + path);
+    throw std::runtime_error(fmt::format("Invalid SPIR-V file size: {}", path));
   file.seekg(0, std::ios::beg);
 
   std::vector<uint32_t> words(static_cast<size_t>(size) / sizeof(uint32_t));
   if (!file.read(reinterpret_cast<char*>(words.data()), size))
-    throw std::runtime_error(std::string("Failed to read SPIR-V file: ") +
-                             path);
+    throw std::runtime_error(fmt::format("Failed to read SPIR-V file: {}", path));
 
   return words;
 }
