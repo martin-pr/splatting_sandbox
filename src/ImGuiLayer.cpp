@@ -19,14 +19,15 @@ ImGuiLayer::ImGuiLayer(SDL_Window* window, const Renderer::Context& ctx)
 
     ImGui_ImplSDL3_InitForVulkan(window);
 
-    VkDescriptorPoolSize poolSize = {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                                     1000};
-    VkDescriptorPoolCreateInfo dpci{
-        VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO};
-    dpci.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-    dpci.maxSets = 1000;
-    dpci.poolSizeCount = 1;
-    dpci.pPoolSizes = &poolSize;
+    const VkDescriptorPoolSize poolSize = {
+        VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000};
+    const VkDescriptorPoolCreateInfo dpci{
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+        .flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT,
+        .maxSets = 1000,
+        .poolSizeCount = 1,
+        .pPoolSizes = &poolSize,
+    };
     if (vkCreateDescriptorPool(device_, &dpci, nullptr, &pool_) != VK_SUCCESS)
       throw std::runtime_error("vkCreateDescriptorPool failed");
 
