@@ -21,6 +21,9 @@ int main(int argc, char* argv[]) {
   TriangleLayer triangleLayer(renderer.GetContext());
   ImGuiLayer imguiLayer(app.GetWindow(), renderer.GetContext());
 
+  bool showTriangle = true;
+  bool showImage = true;
+
   bool running = true;
   while (running) {
     running = app.PollEvents([&](const SDL_Event& e) {
@@ -32,24 +35,26 @@ int main(int argc, char* argv[]) {
         renderer.RecreateSwapchain();
 
         // Keep ImGui coordinates in sync with the actual swapchain pixel size.
-        int width = e.window.data1;
-        int height = e.window.data2;
-
-        ImGui::GetIO().DisplaySize = ImVec2(width, height);
+        ImGui::GetIO().DisplaySize = ImVec2(e.window.data1, e.window.data2);
       }
     });
 
     renderer.RenderFrame([&](VkCommandBuffer cmd) {
-      if (imageLayer.has_value()) {
+      if (imageLayer.has_value() && showImage) {
         imageLayer->Render(cmd, renderer.GetSwapchainExtent());
-      } else {
+      }
+
+      if (showTriangle) {
         triangleLayer.Render(cmd);
       }
 
-      imguiLayer.Render(cmd, []() {
-        ImGui::Begin("Hello");
-        ImGui::Text("SDL3 + Vulkan + ImGui");
-        ImGui::Text("Triangle is rendered with Vulkan pipeline.");
+      imguiLayer.Render(cmd, [&]() {
+        ImGui::SetNextWindowPos(ImVec2(5, 5), ImGuiCond_FirstUseEver);
+        ImGui::Begin("Layers");
+        ImGui::Checkbox("Triangle", &showTriangle);
+        if (imageLayer.has_value()) {
+          ImGui::Checkbox("Image", &showImage);
+        }
         ImGui::End();
       });
     });
