@@ -7,8 +7,9 @@ class VulkanHandle {
  public:
   VulkanHandle() = default;
   ~VulkanHandle() {
-    if (handle_ != VK_NULL_HANDLE)
+    if (handle_ != VK_NULL_HANDLE) {
       DestroyFn(device_, handle_, nullptr);
+    }
   }
 
   VulkanHandle(const VulkanHandle&) = delete;
@@ -21,8 +22,9 @@ class VulkanHandle {
 
   VulkanHandle& operator=(VulkanHandle&& other) noexcept {
     if (this != &other) {
-      if (handle_ != VK_NULL_HANDLE)
+      if (handle_ != VK_NULL_HANDLE) {
         DestroyFn(device_, handle_, nullptr);
+      }
       device_ = other.device_;
       handle_ = other.handle_;
       other.handle_ = VK_NULL_HANDLE;
@@ -30,7 +32,7 @@ class VulkanHandle {
     return *this;
   }
 
-  Handle get() const { return handle_; }
+  [[nodiscard]] Handle get() const { return handle_; }
 
  protected:
   VulkanHandle(VkDevice device, Handle handle) noexcept

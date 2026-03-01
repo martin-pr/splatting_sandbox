@@ -9,6 +9,8 @@ class LayerBase {
  public:
   LayerBase(const LayerBase&) = delete;
   LayerBase& operator=(const LayerBase&) = delete;
+  LayerBase(LayerBase&&) = delete;
+  LayerBase& operator=(LayerBase&&) = delete;
 
  protected:
   explicit LayerBase(const Renderer::Context& ctx) : device_(ctx.device) {}
@@ -18,6 +20,12 @@ class LayerBase {
 };
 
 class PipelineLayerBase : public LayerBase {
+ public:
+  PipelineLayerBase(const PipelineLayerBase&) = delete;
+  PipelineLayerBase& operator=(const PipelineLayerBase&) = delete;
+  PipelineLayerBase(PipelineLayerBase&&) = delete;
+  PipelineLayerBase& operator=(PipelineLayerBase&&) = delete;
+
  protected:
   explicit PipelineLayerBase(const Renderer::Context& ctx) : LayerBase(ctx) {}
   ~PipelineLayerBase() = default;

@@ -10,7 +10,7 @@ class TriangleLayer : public PipelineLayerBase {
  public:
   explicit TriangleLayer(const Renderer::Context& ctx);
 
-  void Render(VkCommandBuffer cmd) const;
+  void render(VkCommandBuffer cmd) const;
 
  private:
   VkFormat swapchainFormat_ = VK_FORMAT_UNDEFINED;

@@ -10,7 +10,7 @@ App::App() {
 
   window_ = SDL_CreateWindow("Splatting Sandbox", 1280, 720,
                              SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
-  if (!window_) {
+  if (window_ == nullptr) {
     throw std::runtime_error(SDL_GetError());
   }
 }
@@ -20,7 +20,7 @@ App::~App() {
   SDL_Quit();
 }
 
-bool App::PollEvents(const std::function<void(const SDL_Event&)>& handler) {
+bool App::pollEvents(const std::function<void(const SDL_Event&)>& handler) {
   SDL_Event event;
   while (SDL_PollEvent(&event)) {
     if (handler) {
@@ -35,6 +35,6 @@ bool App::PollEvents(const std::function<void(const SDL_Event&)>& handler) {
   return true;
 }
 
-SDL_Window* App::GetWindow() const {
+SDL_Window* App::getWindow() const {
   return window_;
 }

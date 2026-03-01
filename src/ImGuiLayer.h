@@ -11,11 +11,16 @@ class ImGuiLayer : public LayerBase {
   ImGuiLayer(SDL_Window* window, const Renderer::Context& ctx);
   ~ImGuiLayer();
 
-  void ProcessEvent(const SDL_Event& event);
-  void Render(VkCommandBuffer cmd, const std::function<void()>& uiFn);
+  ImGuiLayer(const ImGuiLayer&) = delete;
+  ImGuiLayer& operator=(const ImGuiLayer&) = delete;
+  ImGuiLayer(ImGuiLayer&&) = delete;
+  ImGuiLayer& operator=(ImGuiLayer&&) = delete;
+
+  void processEvent(const SDL_Event& event);
+  void render(VkCommandBuffer cmd, const std::function<void()>& uiFn);
 
  private:
-  void Destroy();
+  void destroy();
 
   VkDescriptorPool pool_ = VK_NULL_HANDLE;
   bool initialized_ = false;

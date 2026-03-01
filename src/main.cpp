@@ -11,44 +11,43 @@
 
 int main(int argc, char* argv[]) {
   App app;
-  Renderer renderer(app.GetWindow());
+  Renderer renderer(app.getWindow());
 
   std::optional<ImageLayer> imageLayer;
   if (argc > 1) {
-    imageLayer.emplace(renderer.GetContext(), argv[1]);
+    imageLayer.emplace(renderer.getContext(), argv[1]);
   }
 
-  TriangleLayer triangleLayer(renderer.GetContext());
-  ImGuiLayer imguiLayer(app.GetWindow(), renderer.GetContext());
+  TriangleLayer triangleLayer(renderer.getContext());
+  ImGuiLayer imguiLayer(app.getWindow(), renderer.getContext());
 
   bool showTriangle = true;
   bool showImage = true;
 
   bool running = true;
   while (running) {
-    running = app.PollEvents([&](const SDL_Event& e) {
-      imguiLayer.ProcessEvent(e);
+    running = app.pollEvents([&](const SDL_Event& e) {
+      imguiLayer.processEvent(e);
 
       if (e.type == SDL_EVENT_WINDOW_RESIZED ||
           e.type == SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED) {
-        // Resizing requires new swapchain
-        renderer.RecreateSwapchain();
+        renderer.recreateSwapchain();
 
-        // Keep ImGui coordinates in sync with the actual swapchain pixel size.
-        ImGui::GetIO().DisplaySize = ImVec2(e.window.data1, e.window.data2);
+        ImGui::GetIO().DisplaySize = ImVec2(static_cast<float>(e.window.data1),
+                                          static_cast<float>(e.window.data2));
       }
     });
 
-    renderer.RenderFrame([&](VkCommandBuffer cmd) {
+    renderer.renderFrame([&](VkCommandBuffer cmd) {
       if (imageLayer.has_value() && showImage) {
-        imageLayer->Render(cmd, renderer.GetSwapchainExtent());
+        imageLayer->render(cmd, renderer.getSwapchainExtent());
       }
 
       if (showTriangle) {
-        triangleLayer.Render(cmd);
+        triangleLayer.render(cmd);
       }
 
-      imguiLayer.Render(cmd, [&]() {
+      imguiLayer.render(cmd, [&]() {
         ImGui::SetNextWindowPos(ImVec2(5, 5), ImGuiCond_FirstUseEver);
         ImGui::Begin("Layers");
         ImGui::Checkbox("Triangle", &showTriangle);

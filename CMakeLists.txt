@@ -8,6 +8,11 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 find_package(SDL3 REQUIRED)
 find_package(Vulkan REQUIRED)
 find_program(GLSLC_EXECUTABLE glslc REQUIRED)
+find_program(CLANG_TIDY_EXECUTABLE clang-tidy)
+
+if(CLANG_TIDY_EXECUTABLE)
+  set(CMAKE_CXX_CLANG_TIDY "${CLANG_TIDY_EXECUTABLE}")
+endif()
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(IMGUI REQUIRED IMPORTED_TARGET imgui)
@@ -55,6 +60,14 @@ add_custom_target(triangle_shaders ALL
 add_custom_target(image_shaders ALL
   DEPENDS ${IMAGE_VERT_SPV} ${IMAGE_FRAG_SPV}
 )
+
+set_source_files_properties(${IMGUI_SDL3_BACKEND_SRC}
+  PROPERTIES SKIP_LINTING ON)
+
+# OpenImageIO's bundled fmt uses consteval which clang-tidy's clang frontend
+# cannot compile. Downgrade to constexpr for this file.
+set_source_files_properties(src/ImageLayer.cpp PROPERTIES
+  COMPILE_DEFINITIONS "FMT_CONSTEVAL=constexpr")
 
 add_executable(splatting_sandbox ${APP_SOURCES})
 add_dependencies(splatting_sandbox triangle_shaders image_shaders)

@@ -7,7 +7,7 @@ namespace {
   case x:              \
     return #x
 
-const char* VkResultToString(VkResult r) {
+const char* vkResultToString(VkResult r) {
   switch (r) {
     // Success / info codes
     STRING_CASE(VK_SUCCESS);
@@ -68,11 +68,11 @@ const char* VkResultToString(VkResult r) {
 
 }  // namespace
 
-void VkCheck(VkResult result, const char* file, int line) {
+void vkCheck(VkResult result, const char* file, int line) {
   if (result != VK_SUCCESS) {
     throw std::runtime_error(std::string("Vulkan error at ") + file + ":" +
                              std::to_string(line) + " => " +
-                             VkResultToString(result) + " (" +
+                             vkResultToString(result) + " (" +
                              std::to_string(static_cast<int>(result)) + ")");
   }
 }

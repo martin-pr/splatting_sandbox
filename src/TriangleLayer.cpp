@@ -1,5 +1,7 @@
 #include "TriangleLayer.h"
 
+#include <array>
+
 #include "VulkanShaders.h"
 
 #ifndef SHADER_DIR
@@ -8,10 +10,10 @@
 
 TriangleLayer::TriangleLayer(const Renderer::Context& ctx)
     : PipelineLayerBase(ctx), swapchainFormat_(ctx.swapchainFormat) {
-  ShaderModule vertModule(device_, SHADER_DIR "/triangle.vert.spv");
-  ShaderModule fragModule(device_, SHADER_DIR "/triangle.frag.spv");
+  const ShaderModule vertModule(device_, SHADER_DIR "/triangle.vert.spv");
+  const ShaderModule fragModule(device_, SHADER_DIR "/triangle.frag.spv");
 
-  const VkPipelineShaderStageCreateInfo stages[2]{
+  const std::array<VkPipelineShaderStageCreateInfo, 2> stages{{
       {
           .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
           .stage = VK_SHADER_STAGE_VERTEX_BIT,
@@ -24,7 +26,7 @@ TriangleLayer::TriangleLayer(const Renderer::Context& ctx)
           .module = fragModule.get(),
           .pName = "main",
       },
-  };
+  }};
 
   const VkPipelineVertexInputStateCreateInfo vertexInput{
       .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
@@ -65,12 +67,12 @@ TriangleLayer::TriangleLayer(const Renderer::Context& ctx)
       .pAttachments = &colorBlendAttachment,
   };
 
-  const VkDynamicState dynamicStates[] = {VK_DYNAMIC_STATE_VIEWPORT,
-                                          VK_DYNAMIC_STATE_SCISSOR};
+  const std::array<VkDynamicState, 2> dynamicStates = {
+      VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
   const VkPipelineDynamicStateCreateInfo dynamicState{
       .sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
       .dynamicStateCount = 2,
-      .pDynamicStates = dynamicStates,
+      .pDynamicStates = dynamicStates.data(),
   };
 
   pipelineLayout_ = PipelineLayout(
@@ -88,7 +90,7 @@ TriangleLayer::TriangleLayer(const Renderer::Context& ctx)
       .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
       .pNext = &renderingCI,
       .stageCount = 2,
-      .pStages = stages,
+      .pStages = stages.data(),
       .pVertexInputState = &vertexInput,
       .pInputAssemblyState = &inputAssembly,
       .pViewportState = &viewportState,
@@ -102,7 +104,7 @@ TriangleLayer::TriangleLayer(const Renderer::Context& ctx)
   pipeline_ = Pipeline(device_, pipelineCI);
 }
 
-void TriangleLayer::Render(VkCommandBuffer cmd) const {
+void TriangleLayer::render(VkCommandBuffer cmd) const {
   vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_.get());
   vkCmdDraw(cmd, 3, 1, 0, 0);
 }

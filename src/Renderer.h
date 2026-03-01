@@ -24,12 +24,14 @@ class Renderer {
 
   Renderer(const Renderer&) = delete;
   Renderer& operator=(const Renderer&) = delete;
+  Renderer(Renderer&&) = delete;
+  Renderer& operator=(Renderer&&) = delete;
 
-  void RenderFrame(const std::function<void(VkCommandBuffer)>& drawFn = {});
+  void renderFrame(const std::function<void(VkCommandBuffer)>& drawFn = {});
 
-  void RecreateSwapchain();
-  Context GetContext() const;
-  VkExtent2D GetSwapchainExtent() const;
+  void recreateSwapchain();
+  [[nodiscard]] Context getContext() const;
+  [[nodiscard]] VkExtent2D getSwapchainExtent() const;
 
  private:
   struct FrameSync {
@@ -52,20 +54,20 @@ class Renderer {
     uint32_t imageCount = 2;
   };
 
-  void InitInstanceAndSurface();
-  void InitDeviceAndSwapchain();
-  void InitCommandsAndSync();
+  void initInstanceAndSurface();
+  void initDeviceAndSwapchain();
+  void initCommandsAndSync();
 
-  void CreateSwapchain(VkSwapchainKHR oldSwapchain);
-  void AllocateFrameCommandsAndSync();
-  void DestroySwapchainResources();
+  void createSwapchain(VkSwapchainKHR oldSwapchain);
+  void allocateFrameCommandsAndSync();
+  void destroySwapchainResources();
 
-  void Destroy();
+  void destroy();
 
-  static bool HasInstanceLayer(const char* layerName);
-  static VkPhysicalDevice SelectPhysicalDevice(
+  static bool hasInstanceLayer(const char* layerName);
+  static VkPhysicalDevice selectPhysicalDevice(
       const std::vector<VkPhysicalDevice>& devices);
-  static SwapchainConfig SelectSwapchainConfig(
+  static SwapchainConfig selectSwapchainConfig(
       SDL_Window* window, const VkSurfaceCapabilitiesKHR& caps,
       const std::vector<VkSurfaceFormatKHR>& formats,
       const std::vector<VkPresentModeKHR>& modes);

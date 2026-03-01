@@ -11,18 +11,18 @@ class ImageLayer : public PipelineLayerBase {
  public:
   ImageLayer(const Renderer::Context& ctx, const std::filesystem::path& imagePath);
 
-  void Render(VkCommandBuffer cmd, VkExtent2D extent) const;
+  void render(VkCommandBuffer cmd, VkExtent2D extent) const;
 
  private:
-  std::vector<uint8_t> LoadImagePixels(const std::filesystem::path& path);
-  void UploadTexture(const std::vector<uint8_t>& pixels,
+  std::vector<uint8_t> loadImagePixels(const std::filesystem::path& path);
+  void uploadTexture(const std::vector<uint8_t>& pixels,
                      VkPhysicalDevice physicalDevice,
                      VkQueue queue,
                      uint32_t queueFamily);
-  void CreateDescriptors();
-  void CreatePipeline(VkFormat swapchainFormat);
+  void createDescriptors();
+  void createPipeline(VkFormat swapchainFormat);
 
-  static uint32_t FindMemoryType(VkPhysicalDeviceMemoryProperties memProps,
+  static uint32_t findMemoryType(VkPhysicalDeviceMemoryProperties memProps,
                                  uint32_t typeBits,
                                  VkMemoryPropertyFlags required);
 

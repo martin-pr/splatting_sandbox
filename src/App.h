@@ -11,9 +11,11 @@ class App {
 
   App(const App&) = delete;
   App& operator=(const App&) = delete;
+  App(App&&) = delete;
+  App& operator=(App&&) = delete;
 
-  bool PollEvents(const std::function<void(const SDL_Event&)>& handler = {});
-  SDL_Window* GetWindow() const;
+  bool pollEvents(const std::function<void(const SDL_Event&)>& handler = {});
+  [[nodiscard]] SDL_Window* getWindow() const;
 
  private:
   SDL_Window* window_;

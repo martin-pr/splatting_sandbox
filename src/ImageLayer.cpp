@@ -3,6 +3,7 @@
 #include <OpenImageIO/imageio.h>
 #include <fmt/core.h>
 
+#include <array>
 #include <cstring>
 #include <filesystem>
 #include <stdexcept>
@@ -17,13 +18,13 @@
 ImageLayer::ImageLayer(const Renderer::Context& ctx,
                        const std::filesystem::path& imagePath)
     : PipelineLayerBase(ctx) {
-  const auto pixels = LoadImagePixels(imagePath);
-  UploadTexture(pixels, ctx.physicalDevice, ctx.graphicsQueue, ctx.queueFamily);
-  CreateDescriptors();
-  CreatePipeline(ctx.swapchainFormat);
+  const auto pixels = loadImagePixels(imagePath);
+  uploadTexture(pixels, ctx.physicalDevice, ctx.graphicsQueue, ctx.queueFamily);
+  createDescriptors();
+  createPipeline(ctx.swapchainFormat);
 }
 
-void ImageLayer::Render(VkCommandBuffer cmd, VkExtent2D extent) const {
+void ImageLayer::render(VkCommandBuffer cmd, VkExtent2D extent) const {
   vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_.get());
   vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
                           pipelineLayout_.get(), 0, 1, &descriptorSet_, 0,
@@ -34,8 +35,10 @@ void ImageLayer::Render(VkCommandBuffer cmd, VkExtent2D extent) const {
     float screenAspect;
   };
   const PushConstants pc{
-      static_cast<float>(imageWidth_) / static_cast<float>(imageHeight_),
-      static_cast<float>(extent.width) / static_cast<float>(extent.height),
+      .imageAspect =
+          static_cast<float>(imageWidth_) / static_cast<float>(imageHeight_),
+      .screenAspect =
+          static_cast<float>(extent.width) / static_cast<float>(extent.height),
   };
   vkCmdPushConstants(cmd, pipelineLayout_.get(), VK_SHADER_STAGE_VERTEX_BIT, 0,
                      sizeof(pc), &pc);
@@ -43,12 +46,13 @@ void ImageLayer::Render(VkCommandBuffer cmd, VkExtent2D extent) const {
   vkCmdDraw(cmd, 6, 1, 0, 0);
 }
 
-std::vector<uint8_t> ImageLayer::LoadImagePixels(
+std::vector<uint8_t> ImageLayer::loadImagePixels(
     const std::filesystem::path& path) {
   auto inp = OIIO::ImageInput::open(path.string());
-  if (!inp)
+  if (!inp) {
     throw std::runtime_error(fmt::format("Failed to open image: {} ({})",
                                          path.string(), OIIO::geterror()));
+  }
 
   const OIIO::ImageSpec& spec = inp->spec();
   imageWidth_ = spec.width;
@@ -58,9 +62,11 @@ std::vector<uint8_t> ImageLayer::LoadImagePixels(
   const size_t npixels = static_cast<size_t>(imageWidth_) * imageHeight_;
 
   std::vector<uint8_t> raw(npixels * nchans);
-  if (!inp->read_image(0, 0, 0, nchans, OIIO::TypeDesc::UINT8, raw.data()))
+  if (!inp->read_image(0, 0, 0, static_cast<int>(nchans),
+                       OIIO::TypeDesc::UINT8, raw.data())) {
     throw std::runtime_error(fmt::format("Failed to read image pixels: {} ({})",
                                          path.string(), inp->geterror()));
+  }
   inp->close();
 
   std::vector<uint8_t> pixels(npixels * 4);
@@ -78,7 +84,7 @@ std::vector<uint8_t> ImageLayer::LoadImagePixels(
   return pixels;
 }
 
-void ImageLayer::UploadTexture(const std::vector<uint8_t>& pixels,
+void ImageLayer::uploadTexture(const std::vector<uint8_t>& pixels,
                                VkPhysicalDevice physicalDevice, VkQueue queue,
                                uint32_t queueFamily) {
   const VkDeviceSize dataSize = static_cast<VkDeviceSize>(imageWidth_) *
@@ -88,21 +94,21 @@ void ImageLayer::UploadTexture(const std::vector<uint8_t>& pixels,
   vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProps);
 
   // Staging buffer
-  Buffer stagingBuffer(device_,
-                       VkBufferCreateInfo{
-                           .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-                           .size = dataSize,
-                           .usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                       });
+  const Buffer stagingBuffer(device_,
+                             VkBufferCreateInfo{
+                                 .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+                                 .size = dataSize,
+                                 .usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                             });
 
   VkMemoryRequirements reqs{};
   vkGetBufferMemoryRequirements(device_, stagingBuffer.get(), &reqs);
-  DeviceMemory stagingMemory(
+  const DeviceMemory stagingMemory(
       device_, VkMemoryAllocateInfo{
                    .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
                    .allocationSize = reqs.size,
                    .memoryTypeIndex =
-                       FindMemoryType(memProps, reqs.memoryTypeBits,
+                       findMemoryType(memProps, reqs.memoryTypeBits,
                                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                                           VK_MEMORY_PROPERTY_HOST_COHERENT_BIT),
                });
@@ -141,7 +147,7 @@ void ImageLayer::UploadTexture(const std::vector<uint8_t>& pixels,
                      .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
                      .allocationSize = reqs.size,
                      .memoryTypeIndex =
-                         FindMemoryType(memProps, reqs.memoryTypeBits,
+                         findMemoryType(memProps, reqs.memoryTypeBits,
                                         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT),
                  });
     VK_CHECK(
@@ -150,7 +156,7 @@ void ImageLayer::UploadTexture(const std::vector<uint8_t>& pixels,
 
   // Upload via one-shot command buffer
   {
-    CommandPool uploadPool(
+    const CommandPool uploadPool(
         device_, VkCommandPoolCreateInfo{
                      .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
                      .flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT,
@@ -261,7 +267,7 @@ void ImageLayer::UploadTexture(const std::vector<uint8_t>& pixels,
                      });
 }
 
-void ImageLayer::CreateDescriptors() {
+void ImageLayer::createDescriptors() {
   descriptorSetLayout_ = DescriptorSetLayout(
       device_, VkDescriptorSetLayoutBinding{
                    .binding = 0,
@@ -303,11 +309,11 @@ void ImageLayer::CreateDescriptors() {
   vkUpdateDescriptorSets(device_, 1, &write, 0, nullptr);
 }
 
-void ImageLayer::CreatePipeline(VkFormat swapchainFormat) {
-  ShaderModule vertModule(device_, SHADER_DIR "/image.vert.spv");
-  ShaderModule fragModule(device_, SHADER_DIR "/image.frag.spv");
+void ImageLayer::createPipeline(VkFormat swapchainFormat) {
+  const ShaderModule vertModule(device_, SHADER_DIR "/image.vert.spv");
+  const ShaderModule fragModule(device_, SHADER_DIR "/image.frag.spv");
 
-  const VkPipelineShaderStageCreateInfo stages[2]{
+  const std::array<VkPipelineShaderStageCreateInfo, 2> stages{{
       {
           .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
           .stage = VK_SHADER_STAGE_VERTEX_BIT,
@@ -320,7 +326,7 @@ void ImageLayer::CreatePipeline(VkFormat swapchainFormat) {
           .module = fragModule.get(),
           .pName = "main",
       },
-  };
+  }};
 
   const VkPushConstantRange pcRange{
       .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
@@ -376,12 +382,12 @@ void ImageLayer::CreatePipeline(VkFormat swapchainFormat) {
       .pAttachments = &colorBlendAttachment,
   };
 
-  const VkDynamicState dynamicStates[] = {VK_DYNAMIC_STATE_VIEWPORT,
-                                          VK_DYNAMIC_STATE_SCISSOR};
+  const std::array<VkDynamicState, 2> dynamicStates = {
+      VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
   const VkPipelineDynamicStateCreateInfo dynamicState{
       .sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
       .dynamicStateCount = 2,
-      .pDynamicStates = dynamicStates,
+      .pDynamicStates = dynamicStates.data(),
   };
 
   const VkPipelineRenderingCreateInfo renderingCI{
@@ -394,7 +400,7 @@ void ImageLayer::CreatePipeline(VkFormat swapchainFormat) {
       .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
       .pNext = &renderingCI,
       .stageCount = 2,
-      .pStages = stages,
+      .pStages = stages.data(),
       .pVertexInputState = &vertexInput,
       .pInputAssemblyState = &inputAssembly,
       .pViewportState = &viewportState,
@@ -407,11 +413,11 @@ void ImageLayer::CreatePipeline(VkFormat swapchainFormat) {
   pipeline_ = Pipeline(device_, pipelineCI);
 }
 
-uint32_t ImageLayer::FindMemoryType(VkPhysicalDeviceMemoryProperties memProps,
+uint32_t ImageLayer::findMemoryType(VkPhysicalDeviceMemoryProperties memProps,
                                     uint32_t typeBits,
                                     VkMemoryPropertyFlags required) {
   for (uint32_t i = 0; i < memProps.memoryTypeCount; ++i) {
-    if ((typeBits & (1u << i)) &&
+    if (((typeBits & (1u << i)) != 0) &&
         (memProps.memoryTypes[i].propertyFlags & required) == required) {
       return i;
     }

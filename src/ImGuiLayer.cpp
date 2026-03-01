@@ -7,7 +7,7 @@
 #include <stdexcept>
 
 ImGuiLayer::~ImGuiLayer() {
-  Destroy();
+  destroy();
 }
 
 ImGuiLayer::ImGuiLayer(SDL_Window* window, const Renderer::Context& ctx)
@@ -28,8 +28,9 @@ ImGuiLayer::ImGuiLayer(SDL_Window* window, const Renderer::Context& ctx)
         .poolSizeCount = 1,
         .pPoolSizes = &poolSize,
     };
-    if (vkCreateDescriptorPool(device_, &dpci, nullptr, &pool_) != VK_SUCCESS)
+    if (vkCreateDescriptorPool(device_, &dpci, nullptr, &pool_) != VK_SUCCESS) {
       throw std::runtime_error("vkCreateDescriptorPool failed");
+    }
 
     ImGui_ImplVulkan_InitInfo initInfo{};
     initInfo.Instance = ctx.instance;
@@ -44,26 +45,27 @@ ImGuiLayer::ImGuiLayer(SDL_Window* window, const Renderer::Context& ctx)
     initInfo.ApiVersion = VK_API_VERSION_1_3;
     initInfo.UseDynamicRendering = true;
     initInfo.PipelineRenderingCreateInfo = {
-        VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR};
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR};
     initInfo.PipelineRenderingCreateInfo.colorAttachmentCount = 1;
     initInfo.PipelineRenderingCreateInfo.pColorAttachmentFormats =
         &ctx.swapchainFormat;
 
-    if (!ImGui_ImplVulkan_Init(&initInfo))
+    if (!ImGui_ImplVulkan_Init(&initInfo)) {
       throw std::runtime_error("ImGui_ImplVulkan_Init failed");
+    }
 
     initialized_ = true;
   } catch (...) {
-    Destroy();
+    destroy();
     throw;
   }
 }
 
-void ImGuiLayer::ProcessEvent(const SDL_Event& event) {
+void ImGuiLayer::processEvent(const SDL_Event& event) {
   ImGui_ImplSDL3_ProcessEvent(&event);
 }
 
-void ImGuiLayer::Render(VkCommandBuffer cmd,
+void ImGuiLayer::render(VkCommandBuffer cmd,
                         const std::function<void()>& uiFn) {
   ImGui_ImplSDL3_NewFrame();
   ImGui_ImplVulkan_NewFrame();
@@ -75,7 +77,7 @@ void ImGuiLayer::Render(VkCommandBuffer cmd,
   ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
 }
 
-void ImGuiLayer::Destroy() {
+void ImGuiLayer::destroy() {
   if (initialized_) {
     vkDeviceWaitIdle(device_);
     ImGui_ImplVulkan_Shutdown();
