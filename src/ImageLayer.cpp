@@ -1,7 +1,6 @@
 #include "ImageLayer.h"
 
 #include <OpenImageIO/imageio.h>
-
 #include <fmt/core.h>
 
 #include <cstring>
@@ -26,8 +25,9 @@ ImageLayer::ImageLayer(const Renderer::Context& ctx,
 
 void ImageLayer::Render(VkCommandBuffer cmd, VkExtent2D extent) const {
   vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_.get());
-  vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout_.get(),
-                          0, 1, &descriptorSet_, 0, nullptr);
+  vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                          pipelineLayout_.get(), 0, 1, &descriptorSet_, 0,
+                          nullptr);
 
   struct PushConstants {
     float imageAspect;
@@ -43,10 +43,12 @@ void ImageLayer::Render(VkCommandBuffer cmd, VkExtent2D extent) const {
   vkCmdDraw(cmd, 6, 1, 0, 0);
 }
 
-std::vector<uint8_t> ImageLayer::LoadImagePixels(const std::filesystem::path& path) {
+std::vector<uint8_t> ImageLayer::LoadImagePixels(
+    const std::filesystem::path& path) {
   auto inp = OIIO::ImageInput::open(path.string());
   if (!inp)
-    throw std::runtime_error(fmt::format("Failed to open image: {} ({})", path.string(), OIIO::geterror()));
+    throw std::runtime_error(fmt::format("Failed to open image: {} ({})",
+                                         path.string(), OIIO::geterror()));
 
   const OIIO::ImageSpec& spec = inp->spec();
   imageWidth_ = spec.width;
@@ -57,7 +59,8 @@ std::vector<uint8_t> ImageLayer::LoadImagePixels(const std::filesystem::path& pa
 
   std::vector<uint8_t> raw(npixels * nchans);
   if (!inp->read_image(0, 0, 0, nchans, OIIO::TypeDesc::UINT8, raw.data()))
-    throw std::runtime_error(fmt::format("Failed to read image pixels: {} ({})", path.string(), inp->geterror()));
+    throw std::runtime_error(fmt::format("Failed to read image pixels: {} ({})",
+                                         path.string(), inp->geterror()));
   inp->close();
 
   std::vector<uint8_t> pixels(npixels * 4);
@@ -89,9 +92,7 @@ void ImageLayer::UploadTexture(const std::vector<uint8_t>& pixels,
   bci.size = dataSize;
   bci.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
   bci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-  VkBuffer rawStagingBuffer;
-  VK_CHECK(vkCreateBuffer(device_, &bci, nullptr, &rawStagingBuffer));
-  Buffer stagingBuffer(device_, rawStagingBuffer);
+  Buffer stagingBuffer(device_, bci);
 
   VkMemoryRequirements reqs{};
   vkGetBufferMemoryRequirements(device_, stagingBuffer.get(), &reqs);
@@ -100,14 +101,14 @@ void ImageLayer::UploadTexture(const std::vector<uint8_t>& pixels,
   ai.memoryTypeIndex = FindMemoryType(memProps, reqs.memoryTypeBits,
                                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                                           VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-  VkDeviceMemory rawStagingMemory;
-  VK_CHECK(vkAllocateMemory(device_, &ai, nullptr, &rawStagingMemory));
-  DeviceMemory stagingMemory(device_, rawStagingMemory);
-  VK_CHECK(vkBindBufferMemory(device_, stagingBuffer.get(), stagingMemory.get(), 0));
+  DeviceMemory stagingMemory(device_, ai);
+  VK_CHECK(
+      vkBindBufferMemory(device_, stagingBuffer.get(), stagingMemory.get(), 0));
 
   {
     void* mapped = nullptr;
-    VK_CHECK(vkMapMemory(device_, stagingMemory.get(), 0, dataSize, 0, &mapped));
+    VK_CHECK(
+        vkMapMemory(device_, stagingMemory.get(), 0, dataSize, 0, &mapped));
     std::memcpy(mapped, pixels.data(), static_cast<size_t>(dataSize));
     vkUnmapMemory(device_, stagingMemory.get());
   }
@@ -126,9 +127,7 @@ void ImageLayer::UploadTexture(const std::vector<uint8_t>& pixels,
     ici.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
     ici.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     ici.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    VkImage rawImage;
-    VK_CHECK(vkCreateImage(device_, &ici, nullptr, &rawImage));
-    texture_ = Image(device_, rawImage);
+    texture_ = Image(device_, ici);
 
     VkMemoryRequirements reqs{};
     vkGetImageMemoryRequirements(device_, texture_.get(), &reqs);
@@ -136,10 +135,9 @@ void ImageLayer::UploadTexture(const std::vector<uint8_t>& pixels,
     ai.allocationSize = reqs.size;
     ai.memoryTypeIndex = FindMemoryType(memProps, reqs.memoryTypeBits,
                                         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-    VkDeviceMemory rawImageMemory;
-    VK_CHECK(vkAllocateMemory(device_, &ai, nullptr, &rawImageMemory));
-    textureMemory_ = DeviceMemory(device_, rawImageMemory);
-    VK_CHECK(vkBindImageMemory(device_, texture_.get(), textureMemory_.get(), 0));
+    textureMemory_ = DeviceMemory(device_, ai);
+    VK_CHECK(
+        vkBindImageMemory(device_, texture_.get(), textureMemory_.get(), 0));
   }
 
   // Upload via one-shot command buffer
@@ -147,9 +145,7 @@ void ImageLayer::UploadTexture(const std::vector<uint8_t>& pixels,
     VkCommandPoolCreateInfo cpci{VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO};
     cpci.queueFamilyIndex = queueFamily;
     cpci.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
-    VkCommandPool rawPool;
-    VK_CHECK(vkCreateCommandPool(device_, &cpci, nullptr, &rawPool));
-    CommandPool uploadPool(device_, rawPool);
+    CommandPool uploadPool(device_, cpci);
 
     VkCommandBuffer uploadCmd = VK_NULL_HANDLE;
     VkCommandBufferAllocateInfo cbai{
@@ -224,9 +220,7 @@ void ImageLayer::UploadTexture(const std::vector<uint8_t>& pixels,
     ivci.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     ivci.subresourceRange.levelCount = 1;
     ivci.subresourceRange.layerCount = 1;
-    VkImageView rawView;
-    VK_CHECK(vkCreateImageView(device_, &ivci, nullptr, &rawView));
-    textureView_ = ImageView(device_, rawView);
+    textureView_ = ImageView(device_, ivci);
   }
 
   // Sampler
@@ -242,9 +236,7 @@ void ImageLayer::UploadTexture(const std::vector<uint8_t>& pixels,
   sci.unnormalizedCoordinates = VK_FALSE;
   sci.compareEnable = VK_FALSE;
   sci.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-  VkSampler rawSampler;
-  VK_CHECK(vkCreateSampler(device_, &sci, nullptr, &rawSampler));
-  sampler_ = Sampler(device_, rawSampler);
+  sampler_ = Sampler(device_, sci);
 }
 
 void ImageLayer::CreateDescriptors() {
@@ -254,26 +246,13 @@ void ImageLayer::CreateDescriptors() {
   binding.descriptorCount = 1;
   binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
-  VkDescriptorSetLayoutCreateInfo dslci{
-      VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO};
-  dslci.bindingCount = 1;
-  dslci.pBindings = &binding;
-  VkDescriptorSetLayout rawLayout;
-  VK_CHECK(vkCreateDescriptorSetLayout(device_, &dslci, nullptr, &rawLayout));
-  descriptorSetLayout_ = DescriptorSetLayout(device_, rawLayout);
+  descriptorSetLayout_ = DescriptorSetLayout(device_, binding);
 
   VkDescriptorPoolSize poolSize{};
   poolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
   poolSize.descriptorCount = 1;
 
-  VkDescriptorPoolCreateInfo dpci{
-      VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO};
-  dpci.maxSets = 1;
-  dpci.poolSizeCount = 1;
-  dpci.pPoolSizes = &poolSize;
-  VkDescriptorPool rawPool;
-  VK_CHECK(vkCreateDescriptorPool(device_, &dpci, nullptr, &rawPool));
-  descriptorPool_ = DescriptorPool(device_, rawPool);
+  descriptorPool_ = DescriptorPool(device_, 1, poolSize);
 
   VkDescriptorSetLayout layoutHandle = descriptorSetLayout_.get();
   VkDescriptorSetAllocateInfo dsai{
@@ -312,82 +291,81 @@ void ImageLayer::CreatePipeline(VkFormat swapchainFormat) {
   stages[1].module = fragModule.get();
   stages[1].pName = "main";
 
-    VkPushConstantRange pcRange{};
-    pcRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-    pcRange.offset = 0;
-    pcRange.size = 2 * sizeof(float);
+  VkPushConstantRange pcRange{};
+  pcRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+  pcRange.offset = 0;
+  pcRange.size = 2 * sizeof(float);
 
-    VkPipelineLayoutCreateInfo layoutCI{
-        VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
-    layoutCI.setLayoutCount = 1;
-    VkDescriptorSetLayout layoutHandle = descriptorSetLayout_.get();
-    layoutCI.pSetLayouts = &layoutHandle;
-    layoutCI.pushConstantRangeCount = 1;
-    layoutCI.pPushConstantRanges = &pcRange;
-    pipelineLayout_ = PipelineLayout(device_, layoutCI);
+  VkPipelineLayoutCreateInfo layoutCI{
+      VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
+  layoutCI.setLayoutCount = 1;
+  VkDescriptorSetLayout layoutHandle = descriptorSetLayout_.get();
+  layoutCI.pSetLayouts = &layoutHandle;
+  layoutCI.pushConstantRangeCount = 1;
+  layoutCI.pPushConstantRanges = &pcRange;
+  pipelineLayout_ = PipelineLayout(device_, layoutCI);
 
-    VkPipelineVertexInputStateCreateInfo vertexInput{
-        VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO};
+  VkPipelineVertexInputStateCreateInfo vertexInput{
+      VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO};
 
-    VkPipelineInputAssemblyStateCreateInfo inputAssembly{
-        VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO};
-    inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+  VkPipelineInputAssemblyStateCreateInfo inputAssembly{
+      VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO};
+  inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 
-    VkPipelineViewportStateCreateInfo viewportState{
-        VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO};
-    viewportState.viewportCount = 1;
-    viewportState.scissorCount = 1;
+  VkPipelineViewportStateCreateInfo viewportState{
+      VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO};
+  viewportState.viewportCount = 1;
+  viewportState.scissorCount = 1;
 
-    VkPipelineRasterizationStateCreateInfo rasterizer{
-        VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO};
-    rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
-    rasterizer.cullMode = VK_CULL_MODE_NONE;
-    rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-    rasterizer.lineWidth = 1.0f;
+  VkPipelineRasterizationStateCreateInfo rasterizer{
+      VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO};
+  rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
+  rasterizer.cullMode = VK_CULL_MODE_NONE;
+  rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+  rasterizer.lineWidth = 1.0f;
 
-    VkPipelineMultisampleStateCreateInfo multisample{
-        VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO};
-    multisample.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+  VkPipelineMultisampleStateCreateInfo multisample{
+      VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO};
+  multisample.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 
-    VkPipelineColorBlendAttachmentState colorBlendAttachment{};
-    colorBlendAttachment.colorWriteMask =
-        VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
-        VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+  VkPipelineColorBlendAttachmentState colorBlendAttachment{};
+  colorBlendAttachment.colorWriteMask =
+      VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
+      VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
 
-    VkPipelineColorBlendStateCreateInfo colorBlend{
-        VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO};
-    colorBlend.attachmentCount = 1;
-    colorBlend.pAttachments = &colorBlendAttachment;
+  VkPipelineColorBlendStateCreateInfo colorBlend{
+      VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO};
+  colorBlend.attachmentCount = 1;
+  colorBlend.pAttachments = &colorBlendAttachment;
 
-    VkDynamicState dynamicStates[] = {VK_DYNAMIC_STATE_VIEWPORT,
-                                      VK_DYNAMIC_STATE_SCISSOR};
-    VkPipelineDynamicStateCreateInfo dynamicState{
-        VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO};
-    dynamicState.dynamicStateCount = 2;
-    dynamicState.pDynamicStates = dynamicStates;
+  VkDynamicState dynamicStates[] = {VK_DYNAMIC_STATE_VIEWPORT,
+                                    VK_DYNAMIC_STATE_SCISSOR};
+  VkPipelineDynamicStateCreateInfo dynamicState{
+      VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO};
+  dynamicState.dynamicStateCount = 2;
+  dynamicState.pDynamicStates = dynamicStates;
 
-    VkPipelineRenderingCreateInfo renderingCI{
-        VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO};
-    renderingCI.colorAttachmentCount = 1;
-    renderingCI.pColorAttachmentFormats = &swapchainFormat;
+  VkPipelineRenderingCreateInfo renderingCI{
+      VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO};
+  renderingCI.colorAttachmentCount = 1;
+  renderingCI.pColorAttachmentFormats = &swapchainFormat;
 
-    VkGraphicsPipelineCreateInfo pipelineCI{
-        VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO};
-    pipelineCI.pNext = &renderingCI;
-    pipelineCI.stageCount = 2;
-    pipelineCI.pStages = stages;
-    pipelineCI.pVertexInputState = &vertexInput;
-    pipelineCI.pInputAssemblyState = &inputAssembly;
-    pipelineCI.pViewportState = &viewportState;
-    pipelineCI.pRasterizationState = &rasterizer;
-    pipelineCI.pMultisampleState = &multisample;
-    pipelineCI.pColorBlendState = &colorBlend;
-    pipelineCI.pDynamicState = &dynamicState;
-    pipelineCI.layout = pipelineLayout_.get();
-    pipelineCI.renderPass = VK_NULL_HANDLE;
-    pipeline_ = Pipeline(device_, pipelineCI);
+  VkGraphicsPipelineCreateInfo pipelineCI{
+      VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO};
+  pipelineCI.pNext = &renderingCI;
+  pipelineCI.stageCount = 2;
+  pipelineCI.pStages = stages;
+  pipelineCI.pVertexInputState = &vertexInput;
+  pipelineCI.pInputAssemblyState = &inputAssembly;
+  pipelineCI.pViewportState = &viewportState;
+  pipelineCI.pRasterizationState = &rasterizer;
+  pipelineCI.pMultisampleState = &multisample;
+  pipelineCI.pColorBlendState = &colorBlend;
+  pipelineCI.pDynamicState = &dynamicState;
+  pipelineCI.layout = pipelineLayout_.get();
+  pipelineCI.renderPass = VK_NULL_HANDLE;
+  pipeline_ = Pipeline(device_, pipelineCI);
 }
-
 
 uint32_t ImageLayer::FindMemoryType(VkPhysicalDeviceMemoryProperties memProps,
                                     uint32_t typeBits,
