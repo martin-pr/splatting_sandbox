@@ -271,7 +271,6 @@ void Renderer::CreateSwapchain(VkSwapchainKHR oldSwapchain) {
       .imageExtent = sc.extent,
       .imageArrayLayers = 1,
       .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-      .imageSharingMode = VK_SHARING_MODE_EXCLUSIVE,
       .preTransform = caps.currentTransform,
       .compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
       .presentMode = sc.presentMode,
@@ -301,11 +300,12 @@ void Renderer::CreateSwapchain(VkSwapchainKHR oldSwapchain) {
         .image = frames_[i].image,
         .viewType = VK_IMAGE_VIEW_TYPE_2D,
         .format = swapchainFormat_,
-        .subresourceRange = {
-            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-            .levelCount = 1,
-            .layerCount = 1,
-        },
+        .subresourceRange =
+            {
+                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                .levelCount = 1,
+                .layerCount = 1,
+            },
     };
     VK_CHECK(vkCreateImageView(device_, &ivci, nullptr, &frames_[i].view));
   }
@@ -316,14 +316,15 @@ void Renderer::AllocateFrameCommandsAndSync() {
   const VkCommandBufferAllocateInfo cbai{
       .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
       .commandPool = commandPool_,
-      .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
       .commandBufferCount = static_cast<uint32_t>(commandBuffers.size()),
   };
   VK_CHECK(vkAllocateCommandBuffers(device_, &cbai, commandBuffers.data()));
   for (size_t i = 0; i < frames_.size(); ++i)
     frames_[i].commandBuffer = commandBuffers[i];
 
-  VkSemaphoreCreateInfo semInfo{VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
+  const VkSemaphoreCreateInfo semInfo{
+      .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+  };
   for (auto& frame : frames_)
     VK_CHECK(
         vkCreateSemaphore(device_, &semInfo, nullptr, &frame.renderFinished));
@@ -412,8 +413,9 @@ void Renderer::RenderFrame(const std::function<void(VkCommandBuffer)>& drawFn) {
   VkSemaphore renderFinished = frame.renderFinished;
   VK_CHECK(vkResetCommandBuffer(cmd, 0));
 
-  VkCommandBufferBeginInfo beginInfo{
-      VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
+  const VkCommandBufferBeginInfo beginInfo{
+      .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+  };
   VK_CHECK(vkBeginCommandBuffer(cmd, &beginInfo));
 
   const VkImageMemoryBarrier toColor{
@@ -425,11 +427,12 @@ void Renderer::RenderFrame(const std::function<void(VkCommandBuffer)>& drawFn) {
       .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
       .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
       .image = frame.image,
-      .subresourceRange = {
-          .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-          .levelCount = 1,
-          .layerCount = 1,
-      },
+      .subresourceRange =
+          {
+              .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+              .levelCount = 1,
+              .layerCount = 1,
+          },
   };
   vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
                        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0,
@@ -477,11 +480,12 @@ void Renderer::RenderFrame(const std::function<void(VkCommandBuffer)>& drawFn) {
       .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
       .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
       .image = frame.image,
-      .subresourceRange = {
-          .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-          .levelCount = 1,
-          .layerCount = 1,
-      },
+      .subresourceRange =
+          {
+              .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+              .levelCount = 1,
+              .layerCount = 1,
+          },
   };
   vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
                        VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr, 0,

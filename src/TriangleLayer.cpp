@@ -9,7 +9,7 @@
 TriangleLayer::TriangleLayer(const Renderer::Context& ctx)
     : PipelineLayerBase(ctx), swapchainFormat_(ctx.swapchainFormat) {
   ShaderModule vertModule(device_, SHADER_DIR "/triangle.vert.spv");
-    ShaderModule fragModule(device_, SHADER_DIR "/triangle.frag.spv");
+  ShaderModule fragModule(device_, SHADER_DIR "/triangle.frag.spv");
 
   const VkPipelineShaderStageCreateInfo stages[2]{
       {
@@ -73,9 +73,10 @@ TriangleLayer::TriangleLayer(const Renderer::Context& ctx)
       .pDynamicStates = dynamicStates,
   };
 
-  pipelineLayout_ = PipelineLayout(device_, VkPipelineLayoutCreateInfo{
-      .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-  });
+  pipelineLayout_ = PipelineLayout(
+      device_, VkPipelineLayoutCreateInfo{
+                   .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+               });
 
   const VkPipelineRenderingCreateInfo renderingCI{
       .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,

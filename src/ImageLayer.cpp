@@ -93,7 +93,6 @@ void ImageLayer::UploadTexture(const std::vector<uint8_t>& pixels,
                            .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
                            .size = dataSize,
                            .usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                           .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
                        });
 
   VkMemoryRequirements reqs{};
@@ -133,8 +132,6 @@ void ImageLayer::UploadTexture(const std::vector<uint8_t>& pixels,
                            .tiling = VK_IMAGE_TILING_OPTIMAL,
                            .usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT |
                                     VK_IMAGE_USAGE_SAMPLED_BIT,
-                           .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-                           .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
                        });
 
     VkMemoryRequirements reqs{};
@@ -164,7 +161,6 @@ void ImageLayer::UploadTexture(const std::vector<uint8_t>& pixels,
     const VkCommandBufferAllocateInfo cbai{
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
         .commandPool = uploadPool.get(),
-        .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
         .commandBufferCount = 1,
     };
     VK_CHECK(vkAllocateCommandBuffers(device_, &cbai, &uploadCmd));
@@ -178,7 +174,6 @@ void ImageLayer::UploadTexture(const std::vector<uint8_t>& pixels,
     const VkImageMemoryBarrier toTransfer{
         .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
         .dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
-        .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
         .newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
         .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
@@ -262,7 +257,6 @@ void ImageLayer::UploadTexture(const std::vector<uint8_t>& pixels,
                          .addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
                          .addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
                          .addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-                         .maxAnisotropy = 1.0f,
                          .borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK,
                      });
 }

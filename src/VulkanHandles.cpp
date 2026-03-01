@@ -15,20 +15,23 @@ CommandPool::CommandPool(VkDevice device, const VkCommandPoolCreateInfo& ci) {
 DescriptorPool::DescriptorPool(VkDevice device, uint32_t maxSets,
                                const VkDescriptorPoolSize& poolSize) {
   device_ = device;
-  VkDescriptorPoolCreateInfo ci{VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO};
-  ci.maxSets = maxSets;
-  ci.poolSizeCount = 1;
-  ci.pPoolSizes = &poolSize;
+  const VkDescriptorPoolCreateInfo ci{
+      .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+      .maxSets = maxSets,
+      .poolSizeCount = 1,
+      .pPoolSizes = &poolSize,
+  };
   VK_CHECK(vkCreateDescriptorPool(device_, &ci, nullptr, &handle_));
 }
 
 DescriptorSetLayout::DescriptorSetLayout(
     VkDevice device, const VkDescriptorSetLayoutBinding& binding) {
   device_ = device;
-  VkDescriptorSetLayoutCreateInfo ci{
-      VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO};
-  ci.bindingCount = 1;
-  ci.pBindings = &binding;
+  const VkDescriptorSetLayoutCreateInfo ci{
+      .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+      .bindingCount = 1,
+      .pBindings = &binding,
+  };
   VK_CHECK(vkCreateDescriptorSetLayout(device_, &ci, nullptr, &handle_));
 }
 
