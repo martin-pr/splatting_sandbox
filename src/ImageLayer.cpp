@@ -88,20 +88,25 @@ void ImageLayer::UploadTexture(const std::vector<uint8_t>& pixels,
   vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProps);
 
   // Staging buffer
-  VkBufferCreateInfo bci{VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
-  bci.size = dataSize;
-  bci.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-  bci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-  Buffer stagingBuffer(device_, bci);
+  Buffer stagingBuffer(device_,
+                       VkBufferCreateInfo{
+                           .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+                           .size = dataSize,
+                           .usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                           .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+                       });
 
   VkMemoryRequirements reqs{};
   vkGetBufferMemoryRequirements(device_, stagingBuffer.get(), &reqs);
-  VkMemoryAllocateInfo ai{VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};
-  ai.allocationSize = reqs.size;
-  ai.memoryTypeIndex = FindMemoryType(memProps, reqs.memoryTypeBits,
+  DeviceMemory stagingMemory(
+      device_, VkMemoryAllocateInfo{
+                   .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+                   .allocationSize = reqs.size,
+                   .memoryTypeIndex =
+                       FindMemoryType(memProps, reqs.memoryTypeBits,
                                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                                          VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-  DeviceMemory stagingMemory(device_, ai);
+                                          VK_MEMORY_PROPERTY_HOST_COHERENT_BIT),
+               });
   VK_CHECK(
       vkBindBufferMemory(device_, stagingBuffer.get(), stagingMemory.get(), 0));
 
@@ -115,37 +120,45 @@ void ImageLayer::UploadTexture(const std::vector<uint8_t>& pixels,
 
   // Texture image
   {
-    VkImageCreateInfo ici{VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
-    ici.imageType = VK_IMAGE_TYPE_2D;
-    ici.format = VK_FORMAT_R8G8B8A8_UNORM;
-    ici.extent = {static_cast<uint32_t>(imageWidth_),
-                  static_cast<uint32_t>(imageHeight_), 1};
-    ici.mipLevels = 1;
-    ici.arrayLayers = 1;
-    ici.samples = VK_SAMPLE_COUNT_1_BIT;
-    ici.tiling = VK_IMAGE_TILING_OPTIMAL;
-    ici.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-    ici.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    ici.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    texture_ = Image(device_, ici);
+    texture_ =
+        Image(device_, VkImageCreateInfo{
+                           .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+                           .imageType = VK_IMAGE_TYPE_2D,
+                           .format = VK_FORMAT_R8G8B8A8_UNORM,
+                           .extent = {static_cast<uint32_t>(imageWidth_),
+                                      static_cast<uint32_t>(imageHeight_), 1},
+                           .mipLevels = 1,
+                           .arrayLayers = 1,
+                           .samples = VK_SAMPLE_COUNT_1_BIT,
+                           .tiling = VK_IMAGE_TILING_OPTIMAL,
+                           .usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT |
+                                    VK_IMAGE_USAGE_SAMPLED_BIT,
+                           .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+                           .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+                       });
 
     VkMemoryRequirements reqs{};
     vkGetImageMemoryRequirements(device_, texture_.get(), &reqs);
-    VkMemoryAllocateInfo ai{VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};
-    ai.allocationSize = reqs.size;
-    ai.memoryTypeIndex = FindMemoryType(memProps, reqs.memoryTypeBits,
-                                        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-    textureMemory_ = DeviceMemory(device_, ai);
+    textureMemory_ = DeviceMemory(
+        device_, VkMemoryAllocateInfo{
+                     .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+                     .allocationSize = reqs.size,
+                     .memoryTypeIndex =
+                         FindMemoryType(memProps, reqs.memoryTypeBits,
+                                        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT),
+                 });
     VK_CHECK(
         vkBindImageMemory(device_, texture_.get(), textureMemory_.get(), 0));
   }
 
   // Upload via one-shot command buffer
   {
-    VkCommandPoolCreateInfo cpci{VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO};
-    cpci.queueFamilyIndex = queueFamily;
-    cpci.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
-    CommandPool uploadPool(device_, cpci);
+    CommandPool uploadPool(
+        device_, VkCommandPoolCreateInfo{
+                     .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+                     .flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT,
+                     .queueFamilyIndex = queueFamily,
+                 });
 
     VkCommandBuffer uploadCmd = VK_NULL_HANDLE;
     VkCommandBufferAllocateInfo cbai{
@@ -208,51 +221,50 @@ void ImageLayer::UploadTexture(const std::vector<uint8_t>& pixels,
   }
 
   // Image view
-  {
-    VkImageViewCreateInfo ivci{VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
-    ivci.image = texture_.get();
-    ivci.viewType = VK_IMAGE_VIEW_TYPE_2D;
-    ivci.format = VK_FORMAT_R8G8B8A8_UNORM;
-    ivci.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-    ivci.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-    ivci.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-    ivci.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-    ivci.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    ivci.subresourceRange.levelCount = 1;
-    ivci.subresourceRange.layerCount = 1;
-    textureView_ = ImageView(device_, ivci);
-  }
+  textureView_ =
+      ImageView(device_, VkImageViewCreateInfo{
+                             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+                             .image = texture_.get(),
+                             .viewType = VK_IMAGE_VIEW_TYPE_2D,
+                             .format = VK_FORMAT_R8G8B8A8_UNORM,
+                             .subresourceRange =
+                                 {
+                                     .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                                     .levelCount = 1,
+                                     .layerCount = 1,
+                                 },
+                         });
 
   // Sampler
-  VkSamplerCreateInfo sci{VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO};
-  sci.magFilter = VK_FILTER_LINEAR;
-  sci.minFilter = VK_FILTER_LINEAR;
-  sci.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-  sci.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-  sci.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-  sci.anisotropyEnable = VK_FALSE;
-  sci.maxAnisotropy = 1.0f;
-  sci.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-  sci.unnormalizedCoordinates = VK_FALSE;
-  sci.compareEnable = VK_FALSE;
-  sci.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-  sampler_ = Sampler(device_, sci);
+  sampler_ = Sampler(device_,
+                     VkSamplerCreateInfo{
+                         .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+                         .magFilter = VK_FILTER_LINEAR,
+                         .minFilter = VK_FILTER_LINEAR,
+                         .mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR,
+                         .addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+                         .addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+                         .addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+                         .maxAnisotropy = 1.0f,
+                         .borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK,
+                     });
 }
 
 void ImageLayer::CreateDescriptors() {
-  VkDescriptorSetLayoutBinding binding{};
-  binding.binding = 0;
-  binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-  binding.descriptorCount = 1;
-  binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+  descriptorSetLayout_ = DescriptorSetLayout(
+      device_, VkDescriptorSetLayoutBinding{
+                   .binding = 0,
+                   .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                   .descriptorCount = 1,
+                   .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+               });
 
-  descriptorSetLayout_ = DescriptorSetLayout(device_, binding);
-
-  VkDescriptorPoolSize poolSize{};
-  poolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-  poolSize.descriptorCount = 1;
-
-  descriptorPool_ = DescriptorPool(device_, 1, poolSize);
+  descriptorPool_ =
+      DescriptorPool(device_, 1,
+                     VkDescriptorPoolSize{
+                         .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                         .descriptorCount = 1,
+                     });
 
   VkDescriptorSetLayout layoutHandle = descriptorSetLayout_.get();
   VkDescriptorSetAllocateInfo dsai{
