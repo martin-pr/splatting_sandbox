@@ -1,8 +1,5 @@
 #include "TriangleLayer.h"
 
-#include <stdexcept>
-
-#include "VulkanErrors.h"
 #include "VulkanShaders.h"
 
 #ifndef SHADER_DIR
@@ -11,8 +8,7 @@
 
 TriangleLayer::TriangleLayer(const Renderer::Context& ctx)
     : PipelineLayerBase(ctx), swapchainFormat_(ctx.swapchainFormat) {
-  try {
-    ShaderModule vertModule(device_, SHADER_DIR "/triangle.vert.spv");
+  ShaderModule vertModule(device_, SHADER_DIR "/triangle.vert.spv");
     ShaderModule fragModule(device_, SHADER_DIR "/triangle.frag.spv");
 
     VkPipelineShaderStageCreateInfo stages[2]{};
@@ -67,8 +63,7 @@ TriangleLayer::TriangleLayer(const Renderer::Context& ctx)
 
     VkPipelineLayoutCreateInfo layoutCI{
         VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
-    VK_CHECK(
-        vkCreatePipelineLayout(device_, &layoutCI, nullptr, &pipelineLayout_));
+    pipelineLayout_ = PipelineLayout(device_, layoutCI);
 
     VkPipelineRenderingCreateInfo renderingCI{
         VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO};
@@ -87,33 +82,14 @@ TriangleLayer::TriangleLayer(const Renderer::Context& ctx)
     pipelineCI.pMultisampleState = &multisample;
     pipelineCI.pColorBlendState = &colorBlend;
     pipelineCI.pDynamicState = &dynamicState;
-    pipelineCI.layout = pipelineLayout_;
+    pipelineCI.layout = pipelineLayout_.get();
     pipelineCI.renderPass = VK_NULL_HANDLE;
     pipelineCI.subpass = 0;
 
-    VK_CHECK(vkCreateGraphicsPipelines(device_, VK_NULL_HANDLE, 1, &pipelineCI,
-                                       nullptr, &pipeline_));
-
-  } catch (...) {
-    Destroy();
-    throw;
-  }
-}
-
-TriangleLayer::~TriangleLayer() {
-  Destroy();
+  pipeline_ = Pipeline(device_, pipelineCI);
 }
 
 void TriangleLayer::Render(VkCommandBuffer cmd) const {
-  vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_);
+  vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_.get());
   vkCmdDraw(cmd, 3, 1, 0, 0);
-}
-
-void TriangleLayer::Destroy() {
-  if (device_ == VK_NULL_HANDLE) return;
-  vkDestroyPipeline(device_, pipeline_, nullptr);
-  vkDestroyPipelineLayout(device_, pipelineLayout_, nullptr);
-  pipeline_ = VK_NULL_HANDLE;
-  pipelineLayout_ = VK_NULL_HANDLE;
-  device_ = VK_NULL_HANDLE;
 }

@@ -29,16 +29,11 @@ std::vector<uint32_t> LoadSpirvWords(const std::filesystem::path& path) {
 
 }  // namespace
 
-ShaderModule::ShaderModule(VkDevice device, const std::filesystem::path& path)
-    : device_(device) {
+ShaderModule::ShaderModule(VkDevice device, const std::filesystem::path& path) {
+  device_ = device;
   const auto words = LoadSpirvWords(path);
   VkShaderModuleCreateInfo ci{VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO};
   ci.codeSize = words.size() * sizeof(uint32_t);
   ci.pCode = words.data();
-  VK_CHECK(vkCreateShaderModule(device_, &ci, nullptr, &module_));
-}
-
-ShaderModule::~ShaderModule() {
-  if (module_ != VK_NULL_HANDLE)
-    vkDestroyShaderModule(device_, module_, nullptr);
+  VK_CHECK(vkCreateShaderModule(device_, &ci, nullptr, &handle_));
 }

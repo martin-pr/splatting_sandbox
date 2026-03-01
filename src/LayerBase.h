@@ -3,6 +3,7 @@
 #include <vulkan/vulkan.h>
 
 #include "Renderer.h"
+#include "VulkanHandles.h"
 
 class LayerBase {
  public:
@@ -21,6 +22,6 @@ class PipelineLayerBase : public LayerBase {
   explicit PipelineLayerBase(const Renderer::Context& ctx) : LayerBase(ctx) {}
   ~PipelineLayerBase() = default;
 
-  VkPipelineLayout pipelineLayout_ = VK_NULL_HANDLE;
-  VkPipeline pipeline_ = VK_NULL_HANDLE;
+  PipelineLayout pipelineLayout_;
+  Pipeline pipeline_;
 };

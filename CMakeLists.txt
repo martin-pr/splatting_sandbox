@@ -22,6 +22,7 @@ set(APP_SOURCES
   src/Renderer.cpp
   src/TriangleLayer.cpp
   src/VulkanErrors.cpp
+  src/VulkanHandles.cpp
   src/VulkanShaders.cpp
   src/main.cpp
   ${IMGUI_SDL3_BACKEND_SRC}

@@ -10,7 +10,6 @@
 class ImageLayer : public PipelineLayerBase {
  public:
   ImageLayer(const Renderer::Context& ctx, const std::filesystem::path& imagePath);
-  ~ImageLayer();
 
   void Render(VkCommandBuffer cmd, VkExtent2D extent) const;
 
@@ -22,7 +21,6 @@ class ImageLayer : public PipelineLayerBase {
                      uint32_t queueFamily);
   void CreateDescriptors();
   void CreatePipeline(VkFormat swapchainFormat);
-  void Destroy();
 
   static uint32_t FindMemoryType(VkPhysicalDeviceMemoryProperties memProps,
                                  uint32_t typeBits,
@@ -30,12 +28,12 @@ class ImageLayer : public PipelineLayerBase {
 
   int imageWidth_ = 0;
   int imageHeight_ = 0;
-  VkImage texture_ = VK_NULL_HANDLE;
-  VkDeviceMemory textureMemory_ = VK_NULL_HANDLE;
-  VkImageView textureView_ = VK_NULL_HANDLE;
-  VkSampler sampler_ = VK_NULL_HANDLE;
+  Image texture_;
+  DeviceMemory textureMemory_;
+  ImageView textureView_;
+  Sampler sampler_;
 
-  VkDescriptorSetLayout descriptorSetLayout_ = VK_NULL_HANDLE;
-  VkDescriptorPool descriptorPool_ = VK_NULL_HANDLE;
+  DescriptorSetLayout descriptorSetLayout_;
+  DescriptorPool descriptorPool_;
   VkDescriptorSet descriptorSet_ = VK_NULL_HANDLE;
 };
