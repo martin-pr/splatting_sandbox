@@ -4,23 +4,17 @@
 
 #include <vector>
 
-#include "Renderer.h"
+#include "LayerBase.h"
 
-class TriangleLayer {
+class TriangleLayer : public PipelineLayerBase {
  public:
   explicit TriangleLayer(const Renderer::Context& ctx);
   ~TriangleLayer();
 
-  TriangleLayer(const TriangleLayer&) = delete;
-  TriangleLayer& operator=(const TriangleLayer&) = delete;
-
-  void Render(VkCommandBuffer cmd, VkExtent2D extent) const;
+  void Render(VkCommandBuffer cmd) const;
 
  private:
   void Destroy();
 
-  VkDevice device_ = VK_NULL_HANDLE;
   VkFormat swapchainFormat_ = VK_FORMAT_UNDEFINED;
-  VkPipelineLayout pipelineLayout_ = VK_NULL_HANDLE;
-  VkPipeline pipeline_ = VK_NULL_HANDLE;
 };

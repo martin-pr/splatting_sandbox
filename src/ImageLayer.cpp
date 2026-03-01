@@ -17,7 +17,7 @@
 
 ImageLayer::ImageLayer(const Renderer::Context& ctx,
                        const std::filesystem::path& imagePath)
-    : device_(ctx.device) {
+    : PipelineLayerBase(ctx) {
   try {
     const auto pixels = LoadImagePixels(imagePath);
     UploadTexture(pixels, ctx.physicalDevice, ctx.graphicsQueue,
@@ -35,17 +35,6 @@ ImageLayer::~ImageLayer() {
 }
 
 void ImageLayer::Render(VkCommandBuffer cmd, VkExtent2D extent) const {
-  VkViewport viewport{};
-  viewport.width = static_cast<float>(extent.width);
-  viewport.height = static_cast<float>(extent.height);
-  viewport.minDepth = 0.0f;
-  viewport.maxDepth = 1.0f;
-  vkCmdSetViewport(cmd, 0, 1, &viewport);
-
-  VkRect2D scissor{};
-  scissor.extent = extent;
-  vkCmdSetScissor(cmd, 0, 1, &scissor);
-
   vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_);
   vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout_,
                           0, 1, &descriptorSet_, 0, nullptr);

@@ -4,8 +4,8 @@
 #include <optional>
 
 #include "App.h"
-#include "ImageLayer.h"
 #include "ImGuiLayer.h"
+#include "ImageLayer.h"
 #include "Renderer.h"
 #include "TriangleLayer.h"
 
@@ -43,7 +43,7 @@ int main(int argc, char* argv[]) {
       if (imageLayer.has_value()) {
         imageLayer->Render(cmd, renderer.GetSwapchainExtent());
       } else {
-        triangleLayer.Render(cmd, renderer.GetSwapchainExtent());
+        triangleLayer.Render(cmd);
       }
 
       imguiLayer.Render(cmd, []() {

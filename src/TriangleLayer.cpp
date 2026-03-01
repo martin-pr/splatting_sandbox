@@ -10,7 +10,7 @@
 #endif
 
 TriangleLayer::TriangleLayer(const Renderer::Context& ctx)
-    : device_(ctx.device), swapchainFormat_(ctx.swapchainFormat) {
+    : PipelineLayerBase(ctx), swapchainFormat_(ctx.swapchainFormat) {
   VkShaderModule vertModule = VK_NULL_HANDLE;
   VkShaderModule fragModule = VK_NULL_HANDLE;
   try {
@@ -122,18 +122,7 @@ TriangleLayer::~TriangleLayer() {
   Destroy();
 }
 
-void TriangleLayer::Render(VkCommandBuffer cmd, VkExtent2D extent) const {
-  VkViewport viewport{};
-  viewport.width = static_cast<float>(extent.width);
-  viewport.height = static_cast<float>(extent.height);
-  viewport.minDepth = 0.0f;
-  viewport.maxDepth = 1.0f;
-  vkCmdSetViewport(cmd, 0, 1, &viewport);
-
-  VkRect2D scissor{};
-  scissor.extent = extent;
-  vkCmdSetScissor(cmd, 0, 1, &scissor);
-
+void TriangleLayer::Render(VkCommandBuffer cmd) const {
   vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_);
   vkCmdDraw(cmd, 3, 1, 0, 0);
 }

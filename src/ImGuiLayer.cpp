@@ -10,9 +10,8 @@ ImGuiLayer::~ImGuiLayer() {
   Destroy();
 }
 
-ImGuiLayer::ImGuiLayer(SDL_Window* window, const Renderer::Context& ctx) {
-  device_ = ctx.device;
-
+ImGuiLayer::ImGuiLayer(SDL_Window* window, const Renderer::Context& ctx)
+    : LayerBase(ctx) {
   try {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();

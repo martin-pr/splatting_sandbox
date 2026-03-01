@@ -5,15 +5,12 @@
 #include <filesystem>
 #include <vector>
 
-#include "Renderer.h"
+#include "LayerBase.h"
 
-class ImageLayer {
+class ImageLayer : public PipelineLayerBase {
  public:
   ImageLayer(const Renderer::Context& ctx, const std::filesystem::path& imagePath);
   ~ImageLayer();
-
-  ImageLayer(const ImageLayer&) = delete;
-  ImageLayer& operator=(const ImageLayer&) = delete;
 
   void Render(VkCommandBuffer cmd, VkExtent2D extent) const;
 
@@ -31,8 +28,6 @@ class ImageLayer {
                                  uint32_t typeBits,
                                  VkMemoryPropertyFlags required);
 
-  VkDevice device_ = VK_NULL_HANDLE;
-
   int imageWidth_ = 0;
   int imageHeight_ = 0;
   VkImage texture_ = VK_NULL_HANDLE;
@@ -43,7 +38,4 @@ class ImageLayer {
   VkDescriptorSetLayout descriptorSetLayout_ = VK_NULL_HANDLE;
   VkDescriptorPool descriptorPool_ = VK_NULL_HANDLE;
   VkDescriptorSet descriptorSet_ = VK_NULL_HANDLE;
-
-  VkPipelineLayout pipelineLayout_ = VK_NULL_HANDLE;
-  VkPipeline pipeline_ = VK_NULL_HANDLE;
 };

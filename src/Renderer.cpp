@@ -435,6 +435,17 @@ void Renderer::RenderFrame(const std::function<void(VkCommandBuffer)>& drawFn) {
 
   vkCmdBeginRendering(cmd, &renderingInfo);
 
+  VkViewport viewport{};
+  viewport.width = static_cast<float>(swapchainExtent_.width);
+  viewport.height = static_cast<float>(swapchainExtent_.height);
+  viewport.minDepth = 0.0f;
+  viewport.maxDepth = 1.0f;
+  vkCmdSetViewport(cmd, 0, 1, &viewport);
+
+  VkRect2D scissor{};
+  scissor.extent = swapchainExtent_;
+  vkCmdSetScissor(cmd, 0, 1, &scissor);
+
   if (drawFn) drawFn(cmd);
 
   vkCmdEndRendering(cmd);
