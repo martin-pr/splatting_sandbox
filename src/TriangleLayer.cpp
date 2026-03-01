@@ -11,32 +11,18 @@
 
 TriangleLayer::TriangleLayer(const Renderer::Context& ctx)
     : PipelineLayerBase(ctx), swapchainFormat_(ctx.swapchainFormat) {
-  VkShaderModule vertModule = VK_NULL_HANDLE;
-  VkShaderModule fragModule = VK_NULL_HANDLE;
   try {
-    const auto vertWords = LoadSpirvWords(SHADER_DIR "/triangle.vert.spv");
-    const auto fragWords = LoadSpirvWords(SHADER_DIR "/triangle.frag.spv");
-
-    VkShaderModuleCreateInfo vertCI{
-        VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO};
-    vertCI.codeSize = vertWords.size() * sizeof(uint32_t);
-    vertCI.pCode = vertWords.data();
-    VK_CHECK(vkCreateShaderModule(device_, &vertCI, nullptr, &vertModule));
-
-    VkShaderModuleCreateInfo fragCI{
-        VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO};
-    fragCI.codeSize = fragWords.size() * sizeof(uint32_t);
-    fragCI.pCode = fragWords.data();
-    VK_CHECK(vkCreateShaderModule(device_, &fragCI, nullptr, &fragModule));
+    ShaderModule vertModule(device_, SHADER_DIR "/triangle.vert.spv");
+    ShaderModule fragModule(device_, SHADER_DIR "/triangle.frag.spv");
 
     VkPipelineShaderStageCreateInfo stages[2]{};
     stages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     stages[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
-    stages[0].module = vertModule;
+    stages[0].module = vertModule.get();
     stages[0].pName = "main";
     stages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     stages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-    stages[1].module = fragModule;
+    stages[1].module = fragModule.get();
     stages[1].pName = "main";
 
     VkPipelineVertexInputStateCreateInfo vertexInput{
@@ -109,13 +95,9 @@ TriangleLayer::TriangleLayer(const Renderer::Context& ctx)
                                        nullptr, &pipeline_));
 
   } catch (...) {
-    vkDestroyShaderModule(device_, fragModule, nullptr);
-    vkDestroyShaderModule(device_, vertModule, nullptr);
     Destroy();
     throw;
   }
-  vkDestroyShaderModule(device_, fragModule, nullptr);
-  vkDestroyShaderModule(device_, vertModule, nullptr);
 }
 
 TriangleLayer::~TriangleLayer() {

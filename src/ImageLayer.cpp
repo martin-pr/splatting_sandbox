@@ -317,33 +317,18 @@ void ImageLayer::CreateDescriptors() {
 }
 
 void ImageLayer::CreatePipeline(VkFormat swapchainFormat) {
-  VkShaderModule vertModule = VK_NULL_HANDLE;
-  VkShaderModule fragModule = VK_NULL_HANDLE;
-  try {
-    const auto vertWords = LoadSpirvWords(SHADER_DIR "/image.vert.spv");
-    const auto fragWords = LoadSpirvWords(SHADER_DIR "/image.frag.spv");
+  ShaderModule vertModule(device_, SHADER_DIR "/image.vert.spv");
+  ShaderModule fragModule(device_, SHADER_DIR "/image.frag.spv");
 
-    VkShaderModuleCreateInfo vertCI{
-        VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO};
-    vertCI.codeSize = vertWords.size() * sizeof(uint32_t);
-    vertCI.pCode = vertWords.data();
-    VK_CHECK(vkCreateShaderModule(device_, &vertCI, nullptr, &vertModule));
-
-    VkShaderModuleCreateInfo fragCI{
-        VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO};
-    fragCI.codeSize = fragWords.size() * sizeof(uint32_t);
-    fragCI.pCode = fragWords.data();
-    VK_CHECK(vkCreateShaderModule(device_, &fragCI, nullptr, &fragModule));
-
-    VkPipelineShaderStageCreateInfo stages[2]{};
-    stages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    stages[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
-    stages[0].module = vertModule;
-    stages[0].pName = "main";
-    stages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    stages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-    stages[1].module = fragModule;
-    stages[1].pName = "main";
+  VkPipelineShaderStageCreateInfo stages[2]{};
+  stages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+  stages[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
+  stages[0].module = vertModule.get();
+  stages[0].pName = "main";
+  stages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+  stages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+  stages[1].module = fragModule.get();
+  stages[1].pName = "main";
 
     VkPushConstantRange pcRange{};
     pcRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
@@ -420,14 +405,6 @@ void ImageLayer::CreatePipeline(VkFormat swapchainFormat) {
     pipelineCI.renderPass = VK_NULL_HANDLE;
     VK_CHECK(vkCreateGraphicsPipelines(device_, VK_NULL_HANDLE, 1, &pipelineCI,
                                        nullptr, &pipeline_));
-
-  } catch (...) {
-    vkDestroyShaderModule(device_, fragModule, nullptr);
-    vkDestroyShaderModule(device_, vertModule, nullptr);
-    throw;
-  }
-  vkDestroyShaderModule(device_, fragModule, nullptr);
-  vkDestroyShaderModule(device_, vertModule, nullptr);
 }
 
 void ImageLayer::Destroy() {

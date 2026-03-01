@@ -4,6 +4,11 @@
 
 #include <fstream>
 #include <stdexcept>
+#include <vector>
+
+#include "VulkanErrors.h"
+
+namespace {
 
 std::vector<uint32_t> LoadSpirvWords(const std::filesystem::path& path) {
   std::ifstream file(path, std::ios::binary | std::ios::ate);
@@ -20,4 +25,20 @@ std::vector<uint32_t> LoadSpirvWords(const std::filesystem::path& path) {
     throw std::runtime_error(fmt::format("Failed to read SPIR-V file: {}", path.string()));
 
   return words;
+}
+
+}  // namespace
+
+ShaderModule::ShaderModule(VkDevice device, const std::filesystem::path& path)
+    : device_(device) {
+  const auto words = LoadSpirvWords(path);
+  VkShaderModuleCreateInfo ci{VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO};
+  ci.codeSize = words.size() * sizeof(uint32_t);
+  ci.pCode = words.data();
+  VK_CHECK(vkCreateShaderModule(device_, &ci, nullptr, &module_));
+}
+
+ShaderModule::~ShaderModule() {
+  if (module_ != VK_NULL_HANDLE)
+    vkDestroyShaderModule(device_, module_, nullptr);
 }
